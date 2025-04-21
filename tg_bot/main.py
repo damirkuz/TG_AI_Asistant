@@ -1,11 +1,18 @@
 import logging
 
+import asyncpg
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.redis import RedisStorage
 
-from config_data.config import Config, load_config
+from redis.asyncio import Redis
+
+from config_data import Config, load_config
+
+from database import db_create_pool, db_create_need_tables
+
 # Импортируем роутеры
 from tg_bot.handlers import commands, other_messages, auth
 # Импортируем миддлвари
@@ -13,6 +20,7 @@ from tg_bot.handlers import commands, other_messages, auth
 # Импортируем вспомогательные функции для создания нужных объектов
 # ...
 from tg_bot.keyboards import set_main_menu
+from tg_bot.middlewares.commands_middleware import CommandsMiddleware
 
 # Инициализируем логгер
 logger = logging.getLogger(__name__)
@@ -29,11 +37,11 @@ async def start_tg_bot(config: Config):
     # Выводим в консоль информацию о начале запуска бота
     logger.info('Starting bot')
 
-    # Загружаем конфиг в переменную config
-
+    # Инициализируем Redis
+    redis = Redis(host='localhost')
 
     # Инициализируем объект хранилища
-    storage = MemoryStorage()
+    storage = RedisStorage(redis=redis)
 
     # Инициализируем бот и диспетчер
     bot = Bot(
@@ -43,10 +51,12 @@ async def start_tg_bot(config: Config):
     dp = Dispatcher(storage=storage)
 
     # Инициализируем другие объекты (пул соединений с БД, кеш и т.п.)
-    # ...
+    db_pool = await db_create_pool(db_config=config.db)
+    await db_create_need_tables(db_pool=db_pool)
+
 
     # Помещаем нужные объекты в workflow_data диспетчера
-    dp.workflow_data.update({'config': config})
+    dp.workflow_data.update({'config': config, 'db_pool': db_pool})
 
     # Настраиваем главное меню бота
     await set_main_menu(bot)
@@ -56,11 +66,12 @@ async def start_tg_bot(config: Config):
     dp.include_routers(commands.router, auth.router, other_messages.router)
 
     # Регистрируем миддлвари
-    # logger.info('Подключаем миддлвари')
-    # ...
+    logger.info('Подключаем миддлвари')
+    commands.router.message.outer_middleware(CommandsMiddleware())
 
     # Пропускаем накопившиеся апдейты и запускаем polling
     # await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
+
 
 
