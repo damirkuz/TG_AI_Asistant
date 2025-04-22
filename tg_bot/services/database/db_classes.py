@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 from typing import Optional
 __all__ = ["UserDB"]
@@ -12,4 +14,4 @@ class UserDB(BaseModel):
     password: Optional[str]
     is_admin: bool
     is_active: bool
-    created_at: Optional[str]
+    created_at: Optional[datetime]

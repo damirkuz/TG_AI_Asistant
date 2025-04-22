@@ -8,7 +8,6 @@ import telethon.errors
 from config_data import TGAppConfig
 import datetime
 from enum import Enum
-from database import db_execute_sql
 
 
 class AuthStatesEnum(Enum):
@@ -27,7 +26,7 @@ async def auth_send_code(tg_app_config: TGAppConfig,
                          phone: str) -> AuthStatesEnum | dict[str,
                                                               TelegramClient | str]:
     # Создаём папку для сессий
-    os.makedirs("users_tg_sessions", exist_ok=True)
+    os.makedirs("../../users_tg_sessions", exist_ok=True)
 
     session_path = f"users_tg_sessions/main_session_{user_id}_{
         datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"

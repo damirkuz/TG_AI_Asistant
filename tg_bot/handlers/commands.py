@@ -18,12 +18,11 @@ __all__ = ['router']
 router = Router()
 
 
-
 @router.message(CommandStart(), IsRegistered())
 async def process_start_command(message: Message, state: FSMContext):
     keyboard_now = main_menu_keyboard
     await message.answer(text=LEXICON_ANSWERS_RU['/start'], reply_markup=keyboard_now)
-    await state.clear()
+    await state.set_state(FSMMainState.main_menu)
 
 
 # сюда попадёт новый пользователь
@@ -35,8 +34,10 @@ async def process_start_command(message: Message, state: FSMContext):
     await state.set_state(FSMMainState.waiting_rules_accept)
 
 
-# согласие с правилами реализую здесь, так как это единичная операция и логично оставить её там, где она вызывается
-@router.message(StateFilter(FSMMainState.waiting_rules_accept), F.text == LEXICON_BUTTONS_RU['accept_rules'])
+# согласие с правилами реализую здесь, так как это единичная операция и
+# логично оставить её там, где она вызывается
+@router.message(StateFilter(FSMMainState.waiting_rules_accept),
+                F.text == LEXICON_BUTTONS_RU['accept_rules'])
 async def process_accept_rules(message: Message, state: FSMContext):
     await message.answer(text=LEXICON_ANSWERS_RU['accept_success'])
     await state.set_state(FSMAuthState.start_auth)

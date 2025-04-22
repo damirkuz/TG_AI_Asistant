@@ -1,6 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 __all__ = ['FSMMainState', 'FSMAuthState']
 
+
 class FSMMainState(StatesGroup):
     waiting_rules_accept = State()
     main_menu = State()
@@ -16,4 +17,3 @@ class FSMAuthState(StatesGroup):
     waiting_for_code = State()
     waiting_for_password = State()
     successful_auth = State()
-

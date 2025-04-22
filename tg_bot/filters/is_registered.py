@@ -1,8 +1,6 @@
-from typing import Optional
-
 from aiogram.filters import BaseFilter
 from aiogram.types import Message
-from database.db_classes import UserDB
+from tg_bot.services.database import UserDB
 __all__ = ["IsRegistered"]
 
 

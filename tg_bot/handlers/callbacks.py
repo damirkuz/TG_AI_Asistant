@@ -42,4 +42,6 @@ router = Router()
 # @router.callback_query(F.data == 'edit_bookmark_pressed')
 # async def process_edit_bookmarks(callback: CallbackQuery):
 #     keyboard = create_bookmarks_kb(callback, mode='edit')
-#     await callback.message.edit_text(text=LEXICON_ANSWERS_RU['edit_bookmarks'], reply_markup=keyboard)
+# await
+# callback.message.edit_text(text=LEXICON_ANSWERS_RU['edit_bookmarks'],
+# reply_markup=keyboard)
