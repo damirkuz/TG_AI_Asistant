@@ -1,2 +1,3 @@
-class Semantic_search:
-    pass
+class SemanticSearch:
+    def __init__(self):
+        pass
