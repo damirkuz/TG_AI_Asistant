@@ -11,6 +11,8 @@ from config_data import TGAppConfig
 import datetime
 from enum import Enum
 
+__all__ = ["auth_send_code", "auth_enter_code", "auth_enter_password"]
+
 
 class AuthStatesEnum(Enum):
     PhoneNumberBanned = "PhoneNumberBanned",
@@ -25,23 +27,15 @@ class AuthStatesEnum(Enum):
 
 async def auth_send_code(tg_app_config: TGAppConfig,
                          user_id: str,
-                         phone: str) -> AuthStatesEnum | dict[str,
-                                                              TelegramClient | str]:
-    # Создаём папку для сессий
-    # os.makedirs("../../users_tg_sessions", exist_ok=True)
-    #
-    # session_path = f"users_tg_sessions/main_session_{user_id}_{
-    #     datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
-    # client = TelegramClient(
-    #     session_path,
-    #     tg_app_config.api_id,
-    #     tg_app_config.api_hash)
-    # await client.connect()
+                         phone: str) -> (AuthStatesEnum
+                                         | dict[str, TelegramClient | str]):
 
     session = StringSession()
-    client = TelegramClient(session, tg_app_config.api_id, tg_app_config.api_hash)
+    client = TelegramClient(
+        session,
+        tg_app_config.api_id,
+        tg_app_config.api_hash)
     await client.connect()
-
 
     while True:
         try:

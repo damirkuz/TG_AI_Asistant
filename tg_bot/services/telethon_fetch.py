@@ -8,6 +8,7 @@ from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.types import Message, Dialog
 
+__all__ = ["iter_dialog_messages"]
 
 
 

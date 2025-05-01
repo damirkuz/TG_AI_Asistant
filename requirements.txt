@@ -4,3 +4,4 @@ telethon~=1.39.0
 redis~=5.2.1
 asyncpg~=0.30.0
 pydantic~=2.10.6
+pytz~=2025.2

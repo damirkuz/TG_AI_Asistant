@@ -189,3 +189,4 @@ cython_debug/
 .idea/
 
 users_tg_sessions/
+sessions/
