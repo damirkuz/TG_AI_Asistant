@@ -30,7 +30,7 @@ async def db_create_need_tables(db: DB) -> None:
     await db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
-            telegram_id BIGINT UNIQUE NOT NULL,
+            telegram_id BIGINT NOT NULL,  -- Могут быть одинаковые!
             username TEXT,
             full_name TEXT,
             phone_number BIGINT,
@@ -44,10 +44,9 @@ async def db_create_need_tables(db: DB) -> None:
     await db.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            session_path TEXT,
-            created_at TIMESTAMP DEFAULT now(),
-            UNIQUE (user_id, session_path)
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+            session_data TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT now()
         );
     """)
 
@@ -128,31 +127,28 @@ async def db_create_need_tables(db: DB) -> None:
 
 
 
-async def save_auth(client: TelegramClient, db: DB, session_path: str, password: str = None) -> None:
+async def save_auth(client: TelegramClient, db: DB, session_string: str, password: str = None) -> None:
     about_me = await client.get_me()
 
     telegram_id = int(about_me.id)
     username = about_me.username
     full_name = (about_me.first_name or "") + " " + (about_me.last_name or "")
-    phone_number = int(about_me.phone)
+    phone_number = int(about_me.phone) if about_me.phone else None
+    session_data = session_string
 
     user_row = await db.fetch_one("""
-        INSERT INTO users (telegram_id, username, full_name, phone_number, password)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (telegram_id) DO UPDATE
-        SET username = EXCLUDED.username,
-            full_name = EXCLUDED.full_name,
-            phone_number = EXCLUDED.phone_number,
-            password = EXCLUDED.password
-        RETURNING id
-    """, telegram_id, username, full_name, phone_number, password)
+            INSERT INTO users (telegram_id, username, full_name, phone_number, password)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+        """, telegram_id, username, full_name.strip(), phone_number, password)
 
     if user_row is None:
         raise ValueError("Пользователь не был сохранён")
 
     user_id = user_row["id"]
 
-    await db.execute("""
-        INSERT INTO sessions (user_id, session_path)
-        VALUES ($1, $2)
-    """, user_id, session_path)
+    await db.execute(
+        "INSERT INTO sessions (user_id, session_data) VALUES ($1, $2) "
+        "ON CONFLICT (user_id) DO UPDATE SET session_data = EXCLUDED.session_data",
+        user_id, session_string
+    )

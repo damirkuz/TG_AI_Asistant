@@ -40,10 +40,10 @@ async def auth_request_code(message: Message, state: FSMContext, phone: str):
         await message.answer(text=LEXICON_ANSWERS_RU['auth_banned_phone'])
         return
     else:
-        session_path = sent_result.get("session_path")
+        session_string = sent_result.get("session_string")
         router.parent_router.workflow_data.update(
             {"tg_client": sent_result.get("tg_client")})
-        await state.update_data(session_path=session_path)
+        await state.update_data(session_string=session_string)
         await state.update_data(phone=phone)
         await message.answer(text=LEXICON_ANSWERS_RU['auth_request_code'], reply_markup=ReplyKeyboardRemove())
         await state.set_state(FSMAuthState.waiting_for_code)
@@ -106,8 +106,7 @@ async def end_auth(
         client: TelegramClient,
         db: DB,
         password: str = None):
-    state_data = await state.get_data()
-    session_path = state_data.get("session_path")
-    await save_auth(db=db, client=client, session_path=session_path, password=password)
+    session_string = client.session.save()
+    await save_auth(db=db, client=client, session_string=session_string, password=password)
     await message.answer(text=LEXICON_ANSWERS_RU['auth_successful'], reply_markup=main_menu_keyboard)
     await state.set_state(FSMMainState.main_menu)
