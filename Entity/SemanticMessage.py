@@ -1,7 +1,7 @@
 import datetime
 import time
 
-class Message:
+class SemanticMessage:
     """
     Класс для представления сообщения в Telegram.
     """
@@ -67,37 +67,3 @@ class Message:
         self._reply_to_message_id = reply_to_message_id
 
 
-# Пример использования (нужно изменить)
-if __name__ == "__main__":
-    now = datetime.datetime.now()
-    unixtime = int(time.mktime(now.timetuple())) # Необходимо явно предоставить date_unixtime
-
-    message = Message(
-        message_id=123,
-        date=now,
-        date_unixtime=unixtime,  # Передаем date_unixtime
-        from_user="JohnDoe",
-        from_user_id=456,
-        text="Привет! Как дела?",
-        reply_to_message_id=-1
-    )
-
-    print(f"ID сообщения: {message.get_id()}")
-    print(f"Дата сообщения: {message.get_date()}")
-    print(f"Дата (Unix time): {message.get_date_unixtime()}")
-    print(f"Отправитель: {message.get_from()}")
-    print(f"ID отправителя: {message.get_from_id()}")
-    print(f"Текст сообщения: {message.get_text()}")
-    print(f"Ответ на сообщение ID: {message.get_reply_to_message_id()}")
-
-    message.set_text("Я в порядке, спасибо!")
-    message.set_reply_to_message_id(122)
-
-    print("\nПосле изменения:")
-    print(f"Текст сообщения: {message.get_text()}")
-    print(f"Ответ на сообщение ID: {message.get_reply_to_message_id()}")
-
-    # Изменим date_unixtime (не повлияет на date)
-    message.set_date_unixtime(1678886400)
-    print(f"Дата (Unix time) после изменения: {message.get_date_unixtime()}")
-    print(f"Дата (datetime) после изменения date_unixtime: {message.get_date()}")  # date не изменилась
