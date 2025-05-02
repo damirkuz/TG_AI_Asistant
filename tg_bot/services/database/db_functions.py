@@ -5,10 +5,11 @@ from config_data import DatabaseConfig
 from tg_bot.services.database import DB
 
 
-__all__ = ["db_create_pool", "db_create_need_tables", "save_auth"]
+__all__ = ["db_create_pool", "db_create_need_tables", "save_auth", "save_bot_user"]
 
 
 import asyncpg
+
 
 async def db_create_pool(db_config: DatabaseConfig) -> asyncpg.Pool:
     try:
@@ -25,36 +26,48 @@ async def db_create_pool(db_config: DatabaseConfig) -> asyncpg.Pool:
         print(f"Ошибка подключения к базе данных: {e}")
 
 
-
 async def db_create_need_tables(db: DB) -> None:
+    # Основная таблица пользователей бота
     await db.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
+        CREATE TABLE IF NOT EXISTS bot_users (
+            id BIGSERIAL PRIMARY KEY,
             telegram_id BIGINT UNIQUE NOT NULL,
             username TEXT,
             full_name TEXT,
-            phone_number BIGINT,
-            password TEXT,
             is_admin BOOLEAN DEFAULT FALSE,
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT now()
         );
     """)
 
+    # Таблица телеграм-аккаунтов
     await db.execute("""
-        CREATE TABLE IF NOT EXISTS sessions (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            session_path TEXT,
+        CREATE TABLE IF NOT EXISTS tg_accounts (
+            id BIGSERIAL PRIMARY KEY,
+            tg_user_id BIGINT UNIQUE NOT NULL,
+            full_name TEXT,
+            phone_number TEXT,
+            created_at TIMESTAMP DEFAULT now()
+        );
+    """)
+
+    # Таблица сессий
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS account_sessions (
+            id BIGSERIAL PRIMARY KEY,
+            bot_user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
+            tg_account_id BIGINT REFERENCES tg_accounts(id) ON DELETE CASCADE,
+            session_data TEXT NOT NULL,
+            password TEXT,
             created_at TIMESTAMP DEFAULT now(),
-            UNIQUE (user_id, session_path)
+            UNIQUE (bot_user_id, tg_account_id)
         );
     """)
 
     await db.execute("""
         CREATE TABLE IF NOT EXISTS chats (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
             chat_id BIGINT UNIQUE,
             title TEXT,
             type TEXT,
@@ -66,7 +79,7 @@ async def db_create_need_tables(db: DB) -> None:
         CREATE TABLE IF NOT EXISTS messages (
             id BIGSERIAL PRIMARY KEY,
             chat_id BIGINT REFERENCES chats(chat_id) ON DELETE CASCADE,
-            user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+            user_id BIGINT REFERENCES bot_users(id) ON DELETE SET NULL,
             telegram_id BIGINT,
             text TEXT,
             date TIMESTAMP
@@ -75,8 +88,8 @@ async def db_create_need_tables(db: DB) -> None:
 
     await db.execute("""
         CREATE TABLE IF NOT EXISTS dossiers (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
             target_user_id BIGINT,
             chat_id BIGINT,
             summary_md TEXT,
@@ -86,8 +99,8 @@ async def db_create_need_tables(db: DB) -> None:
 
     await db.execute("""
         CREATE TABLE IF NOT EXISTS settings (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
             openai_key TEXT,
             llm_model TEXT
         );
@@ -95,8 +108,8 @@ async def db_create_need_tables(db: DB) -> None:
 
     await db.execute("""
         CREATE TABLE IF NOT EXISTS statistics (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id),
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT REFERENCES bot_users(id),
             action TEXT,
             created_at TIMESTAMP DEFAULT now(),
             details JSONB
@@ -105,7 +118,7 @@ async def db_create_need_tables(db: DB) -> None:
 
     await db.execute("""
         CREATE TABLE IF NOT EXISTS api_keys (
-            id SERIAL PRIMARY KEY,
+            id BIGSERIAL PRIMARY KEY,
             service TEXT,
             key TEXT,
             is_active BOOLEAN DEFAULT TRUE,
@@ -115,8 +128,8 @@ async def db_create_need_tables(db: DB) -> None:
 
     await db.execute("""
         CREATE TABLE IF NOT EXISTS queries (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
             query_text TEXT NOT NULL,
             context_source TEXT,
             context_size INTEGER,
@@ -127,32 +140,125 @@ async def db_create_need_tables(db: DB) -> None:
     """)
 
 
+async def save_auth(
+        client: TelegramClient,
+        db: DB,
+        session_string: str,
+        bot_user_id: int,
+        password: str = None
+) -> None:
+    """
+    Сохраняет или обновляет данные аутентификации телеграм-аккаунта в базе данных.
 
-async def save_auth(client: TelegramClient, db: DB, session_path: str, password: str = None) -> None:
-    about_me = await client.get_me()
+    :param client: Объект TelegramClient для получения информации об аккаунте
+    :param db: Объект подключения к базе данных
+    :param session_string: Строка сессии телеграм-аккаунта
+    :param bot_user_id: ID пользователя бота из таблицы bot_users
+    :param password: Пароль для сессии (опционально)
 
-    telegram_id = int(about_me.id)
-    username = about_me.username
-    full_name = (about_me.first_name or "") + " " + (about_me.last_name or "")
-    phone_number = int(about_me.phone)
+    :raises ValueError: При ошибках сохранения данных или отсутствии аккаунта
+    :raises asyncpg.PostgresError: При ошибках работы с базой данных
+    """
+    try:
+        about_me = await client.get_me()
 
-    user_row = await db.fetch_one("""
-        INSERT INTO users (telegram_id, username, full_name, phone_number, password)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (telegram_id) DO UPDATE
-        SET username = EXCLUDED.username,
-            full_name = EXCLUDED.full_name,
-            phone_number = EXCLUDED.phone_number,
-            password = EXCLUDED.password
-        RETURNING id
-    """, telegram_id, username, full_name, phone_number, password)
+        tg_user_id = int(about_me.id)
+        full_name = ' '.join(filter(None, [about_me.first_name, about_me.last_name])).strip()
+        phone_number = about_me.phone
 
-    if user_row is None:
-        raise ValueError("Пользователь не был сохранён")
+        # Проверка и нормализация номера телефона
+        if phone_number:
+            phone_number = ''.join(filter(str.isdigit, phone_number)) or None
 
-    user_id = user_row["id"]
+        # Вставка данных в таблицу телеграм-аккаунтов
+        tg_account_row = await db.fetch_one("""
+            INSERT INTO tg_accounts (tg_user_id, full_name, phone_number)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (tg_user_id) DO UPDATE SET
+                full_name = EXCLUDED.full_name,
+                phone_number = EXCLUDED.phone_number
+            RETURNING id
+        """, tg_user_id, full_name, phone_number)
 
-    await db.execute("""
-        INSERT INTO sessions (user_id, session_path)
-        VALUES ($1, $2)
-    """, user_id, session_path)
+        if not tg_account_row:
+            raise ValueError("Не удалось сохранить телеграм-аккаунт")
+
+        tg_account_id = tg_account_row["id"]
+
+        # Связывание аккаунта с пользователем бота
+        await db.execute("""
+            INSERT INTO account_sessions (
+                bot_user_id,
+                tg_account_id,
+                session_data,
+                password
+            )
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (bot_user_id, tg_account_id) DO UPDATE SET
+                session_data = EXCLUDED.session_data,
+                password = EXCLUDED.password
+        """, bot_user_id, tg_account_id, session_string, password)
+
+    except asyncpg.ForeignKeyViolationError as e:
+        raise ValueError(f"Неверный bot_user_id: {bot_user_id}") from e
+    except asyncpg.PostgresError as e:
+        raise ValueError(f"Ошибка базы данных: {str(e)}") from e
+    except Exception as e:
+        raise ValueError(f"Ошибка сохранения данных: {str(e)}") from e
+
+
+async def save_bot_user(
+        db: DB,
+        telegram_id: int,
+        full_name: str,
+        username: str | None = None,
+        is_admin: bool = False,
+        is_active: bool = True
+) -> int:
+    """
+    Сохраняет или обновляет пользователя бота в таблице bot_users.
+
+    :param db: Объект подключения к базе данных
+    :param telegram_id: Уникальный идентификатор пользователя в Telegram
+    :param full_name: Полное имя пользователя
+    :param username: Юзернейм в Telegram (опционально)
+    :param is_admin: Флаг администратора (по умолчанию False)
+    :param is_active: Флаг активности аккаунта (по умолчанию True)
+
+    :return: ID созданной или обновленной записи
+    :raises ValueError: При ошибках сохранения данных
+    :raises asyncpg.PostgresError: При ошибках работы с базой данных
+    """
+    try:
+        user_row = await db.fetch_one(
+            """
+            INSERT INTO bot_users (
+                telegram_id,
+                full_name,
+                username,
+                is_admin,
+                is_active
+            )
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (telegram_id) DO UPDATE SET
+                full_name = EXCLUDED.full_name,
+                username = EXCLUDED.username,
+                is_active = EXCLUDED.is_active
+            RETURNING id
+            """,
+            telegram_id,
+            full_name.strip(),
+            username,
+            is_admin,
+            is_active
+        )
+
+        if not user_row:
+            raise ValueError("Ошибка при сохранении пользователя")
+
+        return user_row["id"]
+
+    except asyncpg.PostgresError as e:
+        raise ValueError(f"Ошибка базы данных: {str(e)}") from e
+    except Exception as e:
+        raise ValueError(f"Неожиданная ошибка: {str(e)}") from e

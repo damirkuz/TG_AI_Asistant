@@ -12,13 +12,13 @@ from config_data import Config
 from tg_bot.services.database import db_create_pool, db_create_need_tables, DB
 
 # Импортируем роутеры
-from tg_bot.handlers import commands, other_messages, auth, main_menu
+from tg_bot.handlers import commands, other_messages, auth, main_menu, settings_menu, firstly
 # Импортируем миддлвари
 from tg_bot.middlewares.commands_middleware import CommandsMiddleware
 # Импортируем вспомогательные функции для создания нужных объектов
 # ...
 from tg_bot.keyboards import set_main_menu
-
+from tg_bot.services.redis_client_storage import RedisClientStorage
 
 # Инициализируем логгер
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ async def start_tg_bot(config: Config):
 
     # Инициализируем Redis
     redis = Redis(host='localhost')
+    redis_client_storage = RedisClientStorage(host='redis://localhost')
 
     # Инициализируем объект хранилища
     storage = RedisStorage(redis=redis)
@@ -54,14 +55,14 @@ async def start_tg_bot(config: Config):
     await db_create_need_tables(db=db)
 
     # Помещаем нужные объекты в workflow_data диспетчера
-    dp.workflow_data.update({'config': config, 'db': db})
+    dp.workflow_data.update({'config': config, 'db': db, 'redis_client_storage': redis_client_storage})
 
     # Настраиваем главное меню бота
     await set_main_menu(bot)
 
     # Регистриуем роутеры
     logger.info('Подключаем роутеры')
-    dp.include_routers(commands.router, auth.router, main_menu.router, other_messages.router)
+    dp.include_routers(firstly.router, commands.router, main_menu.router, auth.router, settings_menu.router, other_messages.router)
 
     # Регистрируем миддлвари
     logger.info('Подключаем миддлвари')
