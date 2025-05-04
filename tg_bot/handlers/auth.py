@@ -3,15 +3,15 @@ from aiogram import Router
 from aiogram.types import Message, KeyboardButton, ReplyKeyboardRemove
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from asyncpg import Pool
 from telethon import TelegramClient
 
 from config_data import Config
 from tg_bot.filters.correct_data import CorrectPhone, CorrectOTPCode, CorrectPassword
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
+from tg_bot.services import get_user_db
 from tg_bot.services.redis_client_storage import RedisClientStorage
 from tg_bot.states import FSMAuthState, FSMMainMenu
-from tg_bot.keyboards import create_reply_kb, main_menu_keyboard
+from tg_bot.keyboards import create_reply_kb, main_menu_keyboard, main_menu_admin_keyboard
 
 from tg_bot.services.telethon_auth import auth_send_code, AuthStatesEnum, auth_enter_code, auth_enter_password
 from tg_bot.services.database import save_auth, DB
@@ -126,5 +126,9 @@ async def end_auth(
     session_string = client.session.save()
     state_data = await state.get_data()
     await save_auth(db=db, client=client, session_string=session_string, password=password, bot_user_id=state_data.get('bot_user_id'))
-    await message.answer(text=LEXICON_ANSWERS_RU['auth_successful'], reply_markup=main_menu_keyboard)
+    user_db = await get_user_db(message.from_user.id)
+    if user_db.is_admin:
+        await message.answer(text=LEXICON_ANSWERS_RU['auth_successful'], reply_markup=main_menu_admin_keyboard)
+    else:
+        await message.answer(text=LEXICON_ANSWERS_RU['auth_successful'], reply_markup=main_menu_keyboard)
     await state.set_state(FSMMainMenu.waiting_choice)

@@ -2,10 +2,13 @@ from aiogram.filters import BaseFilter
 from aiogram.types import Message
 __all__ = ["IsAdmin"]
 
+from tg_bot.services import get_user_db
+from tg_bot.services.database import BotUserDB
+
 
 class IsAdmin(BaseFilter):
-    def __init__(self, admin_ids: set[int]) -> None:
-        self.admin_ids = admin_ids
+    async def __call__(self, message: Message, user_db: BotUserDB = None) -> bool:
+        if user_db is None:
+            user_db = await get_user_db(message.from_user.id)
 
-    def __call__(self, message: Message) -> bool:
-        return message.from_user.id in self.admin_ids
+        return user_db.is_admin

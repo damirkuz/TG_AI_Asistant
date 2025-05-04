@@ -12,9 +12,9 @@ from config_data import Config
 from tg_bot.services.database import db_create_pool, db_create_need_tables, DB
 
 # Импортируем роутеры
-from tg_bot.handlers import commands, other_messages, auth, main_menu, settings_menu, firstly
+from tg_bot.handlers import commands, other_messages, auth, main_menu, settings_menu, firstly, admin
 # Импортируем миддлвари
-from tg_bot.middlewares.commands_middleware import CommandsMiddleware
+from tg_bot.middlewares.load_user_db_middleware import LoadUserDbMiddleware
 # Импортируем вспомогательные функции для создания нужных объектов
 # ...
 from tg_bot.keyboards import set_main_menu
@@ -62,11 +62,11 @@ async def start_tg_bot(config: Config):
 
     # Регистриуем роутеры
     logger.info('Подключаем роутеры')
-    dp.include_routers(firstly.router, commands.router, main_menu.router, auth.router, settings_menu.router, other_messages.router)
+    dp.include_routers(firstly.router, commands.router, main_menu.router, admin.router, auth.router, settings_menu.router, other_messages.router)
 
     # Регистрируем миддлвари
     logger.info('Подключаем миддлвари')
-    commands.router.message.outer_middleware(CommandsMiddleware())
+    commands.router.message.outer_middleware(LoadUserDbMiddleware())
 
     # Пропускаем накопившиеся апдейты и запускаем polling
     # await bot.delete_webhook(drop_pending_updates=True)

@@ -13,7 +13,6 @@ class DatabaseConfig:
 @dataclass
 class TgBot:
     token: str
-    admin_ids: set[int]
 
 @dataclass
 class TGAppConfig:
@@ -39,8 +38,7 @@ def load_config(path: str | None = None) -> Config:
             api_hash=env("TG_APP_API_HASH"),
         ),
         tg_bot=TgBot(
-            token=env("BOT_TOKEN"),
-            admin_ids=set(map(int, env.list("ADMIN_IDS")))),
+            token=env("BOT_TOKEN")),
         db=DatabaseConfig(
             database=env("DATABASE"),
             db_host=env("DB_HOST"),

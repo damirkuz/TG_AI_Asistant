@@ -35,7 +35,15 @@ LEXICON_ANSWERS_RU = {
     'settings_add_telegram_menu': "Добавить аккаунт можно двумя способами",
     'settings_add_telegram_session': "Отправь в чат session файл",
     'settings_add_telegram_session_bad': "Извини, но я не понимаю тебя.\nОтправь корректный session файл",
-    'settings_add_telegram_session_good': "Отлично, теперь ты можешь пользоваться ботом"
+    'settings_add_telegram_session_good': "Отлично, теперь ты можешь пользоваться ботом",
+    'admin_menu_start': "😎 Меню администратора:",
+    'admin_statistics': (
+                "📊 <b>Статистика</b>\n"
+                "• 👤 <b>Пользователи:</b> {users_count}\n"
+                "• 🔗 <b>Аккаунтов:</b> {accounts_count}\n"
+                "• ⚡ <b>Действий сегодня:</b> {daily_actions}\n"
+                "• 🗓 <b>Всего действий:</b> {total_actions}"
+    )
 }
 
 LEXICON_BUTTONS_RU = {
@@ -56,5 +64,7 @@ LEXICON_BUTTONS_RU = {
     'settings_my_statistics': '📊 Моя статистика',
     'settings_delete_my_data': '🗑️ Удалить данные о себе',
     'settings_add_telegram_session': '📤 Загрузить session-файл',
-    'settings_add_telegram_phone': '🔢 Войти по номеру и коду'
+    'settings_add_telegram_phone': '🔢 Войти по номеру и коду',
+    'admin_statistics': "📊 Статистика",
+    'admin_users': "👥 Пользователи"
 }
