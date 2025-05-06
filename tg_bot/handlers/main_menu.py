@@ -34,9 +34,3 @@ async def process_start_command(message: Message, state: FSMContext):
     # TODO здесь должен быть проброс на веб интерфейс
     await message.answer(text=LEXICON_ANSWERS_RU['not_done'])
     # await state.set_state(FSMMainState.find_info)
-
-
-@router.message(F.text == LEXICON_BUTTONS_RU['menu_admin'])
-async def process_start_command(message: Message, state: FSMContext):
-    await message.answer(text=LEXICON_ANSWERS_RU['not_done'])
-    # await state.set_state(FSMMainState.find_info)

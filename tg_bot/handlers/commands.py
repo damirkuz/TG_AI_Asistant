@@ -3,8 +3,10 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.filters import CommandStart, Command, StateFilter
-from tg_bot.filters import IsRegistered
+from tg_bot.filters import IsRegistered, IsAdmin
 from tg_bot.keyboards import create_reply_kb, main_menu_keyboard, settings_add_telegram_keyboard
+from tg_bot.keyboards.reply_keyboards import main_menu_admin_keyboard
+from tg_bot.services import BotUserDB
 from tg_bot.services.database import DB
 from tg_bot.services.database.db_functions import save_bot_user
 from tg_bot.states import FSMRulesAgreement, FSMMainMenu, FSMSettingsState
@@ -18,8 +20,11 @@ router = Router()
 
 
 @router.message(CommandStart(), IsRegistered())
-async def process_start_command(message: Message, state: FSMContext):
-    await message.answer(text=LEXICON_ANSWERS_RU['/start'], reply_markup=main_menu_keyboard)
+async def process_start_command(message: Message, state: FSMContext, user_db: BotUserDB):
+    if user_db.is_admin:
+        await message.answer(text=LEXICON_ANSWERS_RU['/start'], reply_markup=main_menu_admin_keyboard)
+    else:
+        await message.answer(text=LEXICON_ANSWERS_RU['/start'], reply_markup=main_menu_keyboard)
     await state.set_state(FSMMainMenu.waiting_choice)
 
 

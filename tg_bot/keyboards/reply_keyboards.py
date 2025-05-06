@@ -2,10 +2,16 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from tg_bot.keyboards import create_reply_kb
 
-__all__ = ['main_menu_keyboard', 'settings_menu_keyboard', 'settings_add_telegram_keyboard']
+__all__ = ['main_menu_keyboard', 'main_menu_admin_keyboard', 'settings_menu_keyboard', 'settings_add_telegram_keyboard', 'admin_menu_keyboard']
 
 
 main_menu_keyboard = create_reply_kb(
+    'menu_settings',
+    'menu_find',
+    'menu_dossier',
+    width=2)
+
+main_menu_admin_keyboard = create_reply_kb(
     'menu_settings',
     'menu_find',
     'menu_dossier',
@@ -25,4 +31,12 @@ settings_add_telegram_keyboard = create_reply_kb(
     'settings_add_telegram_session',
     'settings_add_telegram_phone',
     'back_to_main_menu'
+)
+
+
+admin_menu_keyboard = create_reply_kb(
+    'admin_statistics',
+    'admin_users',
+    'back_to_main_menu',
+    width=2
 )

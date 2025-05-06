@@ -1,5 +1,5 @@
 from aiogram.fsm.state import State, StatesGroup
-__all__ = ['FSMRulesAgreement', 'FSMAuthState', 'FSMMainMenu', 'FSMSettingsState']
+__all__ = ['FSMRulesAgreement', 'FSMAuthState', 'FSMMainMenu', 'FSMSettingsState', 'FSMAdminMenu']
 
 
 class FSMAuthState(StatesGroup):
@@ -19,3 +19,6 @@ class FSMMainMenu(StatesGroup):
 class FSMSettingsState(StatesGroup):
     waiting_choice = State()
     waiting_session_file = State()
+
+class FSMAdminMenu(StatesGroup):
+    waiting_choice = State()
