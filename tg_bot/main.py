@@ -8,6 +8,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 from redis.asyncio import Redis
 
 from config_data import Config
+from tg_bot.middlewares.ban_check_middleware import BanCheckMiddleware
 
 from tg_bot.services.database import db_create_pool, db_create_need_tables, DB
 
@@ -66,6 +67,8 @@ async def start_tg_bot(config: Config):
 
     # Регистрируем миддлвари
     logger.info('Подключаем миддлвари')
+
+    dp.message.outer_middleware(BanCheckMiddleware())
     commands.router.message.outer_middleware(LoadUserDbMiddleware())
 
     # Пропускаем накопившиеся апдейты и запускаем polling

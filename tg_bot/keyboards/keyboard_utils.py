@@ -5,8 +5,8 @@ from typing import Optional
 
 
 def create_inline_kb(
-        width: int,
         *args: str,
+        width: int = 1,
         last_button: Optional[str] = None,
         **kwargs: dict[str, str]) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
