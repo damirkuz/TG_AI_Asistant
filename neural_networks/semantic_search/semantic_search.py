@@ -29,7 +29,7 @@ class SemanticSearch:
     def __init__(self, search_mode=SearchMode.HYBRID):
         self.search_mode = search_mode
 
-    def get_semantic_matches(self, query, messages, k = 5):
+    def get_semantic_matches(self, query: str, messages: list[SemanticMessage], k: int = 5) -> list[SemanticMessage]:
         """Ищет сообщения, семантически близкие к запросу.
 
                 Args:
