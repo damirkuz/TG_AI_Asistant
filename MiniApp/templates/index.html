@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h1 class="h4 mb-0">Анализатор чатов</h1>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/">
+                    <div class="mb-3">
+                        <label for="chat_name" class="form-label">Выберите чат:</label>
+                        <select class="form-select" id="chat_name" name="chat_name" required>
+                            {% for chat in chat_list %}
+                            <option value="{{ chat }}">{{ chat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="start_date" class="form-label">Начальная дата:</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="end_date" class="form-label">Конечная дата:</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Режим анализа:</label>
+                        <div class="btn-group w-100" role="group" aria-label="Analysis mode">
+                            <input type="radio" class="btn-check" name="analysis_mode" id="fast" value="fast" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="fast">Быстрый</label>
+                            
+                            <input type="radio" class="btn-check" name="analysis_mode" id="medium" value="medium" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="medium">Средний</label>
+                            
+                            <input type="radio" class="btn-check" name="analysis_mode" id="slow" value="slow" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="slow">Медленный</label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 py-2">Confirm</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
