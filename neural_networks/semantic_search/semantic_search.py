@@ -34,11 +34,11 @@ class SemanticSearch:
 
                 Args:
                     query (str): Поисковый запрос.
-                    messages (list[str]): Список сообщений для поиска.
+                    messages (list[SemanticMessages]): Список сообщений для поиска.
                     k (int): Количество возвращаемых результатов (по умолчанию 5).
 
                 Returns:
-                    list[str]: Топ-k сообщений, отсортированных по схожести.
+                    list[SemanticMessages]: Топ-k сообщений, отсортированных по схожести.
                 """
         return messages[0:k]
 
