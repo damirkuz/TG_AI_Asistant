@@ -1,7 +1,8 @@
 import datetime
 from enum import Enum, auto
 from TG_AI_Asistant.Entity.SemanticMessage import SemanticMessage
-
+from TG_AI_Asistant.neural_networks.semantic_search.components.extractor.LaBSE import LaBSeSentences
+from TG_AI_Asistant.neural_networks.semantic_search.components.extractor.EmbeddingMessage import EmbeddingMessage
 
 class SearchMode(Enum):
     """Режимы работы семантического поиска.
@@ -26,7 +27,7 @@ class SemanticSearch:
             get_semantic_matches: Возвращает топ-k сообщений, схожих с запросом.
         """
 
-    def __init__(self, search_mode=SearchMode.HYBRID):
+    def __init__(self, search_mode=SearchMode.HYBRID, ):
         self.search_mode = search_mode
 
     def get_semantic_matches(self, query: str, messages: list[SemanticMessage], k: int = 5) -> list[SemanticMessage]:
@@ -40,7 +41,11 @@ class SemanticSearch:
                 Returns:
                     list[SemanticMessages]: Топ-k сообщений, отсортированных по схожести.
                 """
-        return messages[0:k]
+        fast_model = LaBSeSentences()
+        fast_sort_messages = fast_model.get_semantic_matches(query, messages, k)
+        answer = [message[0].get_message() for message in fast_sort_messages]
+
+        return answer
 
 
 # Пример использования
@@ -48,4 +53,4 @@ if __name__ == "__main__":
     messages = [SemanticMessage(123, datetime.datetime(2023, 5, 15), 1684108800, "John", 456, "Hello world!", 789)]
 
     semantic_search = SemanticSearch(SearchMode.SLOW)
-    print(semantic_search.get_semantic_matches("Запрос", messages, 1))
+    print(semantic_search.get_semantic_matches("Запрос", messages, 1)[0].get_text())
