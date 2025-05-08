@@ -22,3 +22,4 @@ class FSMSettingsState(StatesGroup):
 
 class FSMAdminMenu(StatesGroup):
     waiting_choice = State()
+    waiting_find_user = State()
