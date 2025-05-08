@@ -66,7 +66,9 @@ LEXICON_ANSWERS_RU = {
     'admin_user_was_unbanned': "Пользователь разблокирован",
     'you_banned': "😔 Вы заблокированы",
     'admin_user_maked_admin': "Пользователь назначен администратором",
-    'admin_user_unmaked_admin': "Пользователь разжалован"
+    'admin_user_unmaked_admin': "Пользователь разжалован",
+    'settings_delete_my_data': ("Данные о вас удалены\n"
+                                "Чтобы начать заново нажмите /start")
 }
 
 LEXICON_BUTTONS_RU = {

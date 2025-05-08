@@ -15,7 +15,8 @@ __all__ = [
     "get_user_tg_id_in_db",
     "get_user_detailed",
     "ban_bot_user",
-    "make_admin_bot_user"]
+    "make_admin_bot_user",
+    "delete_user_in_db"]
 
 
 import asyncpg
@@ -120,7 +121,7 @@ async def db_create_need_tables(db: DB) -> None:
     await db.execute("""
         CREATE TABLE IF NOT EXISTS statistics (
             id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT REFERENCES bot_users(id),
+            user_id BIGINT REFERENCES bot_users(id) ON DELETE SET NULL,
             action TEXT,
             created_at TIMESTAMP DEFAULT now(),
             details JSONB
@@ -386,3 +387,8 @@ async def make_admin_bot_user(db: DB, telegram_id: int, make_admin: bool = True)
                         SET is_admin = $1
                         WHERE telegram_id = $2
                     """, make_admin, telegram_id)
+
+
+async def delete_user_in_db(db: DB, telegram_id: int) -> None:
+    await db.execute("""DELETE FROM bot_users
+                        WHERE telegram_id = $1""", telegram_id)
