@@ -8,7 +8,7 @@ from tg_bot.handlers.auth import auth_request_phone
 from tg_bot.keyboards.reply_keyboards import settings_add_telegram_keyboard, main_menu_keyboard, \
     main_menu_admin_keyboard
 from tg_bot.services import get_user_db
-from tg_bot.services.database import save_auth, DB
+from tg_bot.services.database import save_auth, DB, delete_user_in_db
 from tg_bot.states import FSMSettingsState, FSMMainMenu, FSMAuthState
 from tg_bot.filters import IsCorrectSession
 
@@ -22,7 +22,7 @@ router = Router()
 router.message.filter(StateFilter(FSMSettingsState))
 
 
-@router.message(F.text == LEXICON_BUTTONS_RU['settings_add_telegram'])
+@router.message(StateFilter(FSMSettingsState.waiting_choice), F.text == LEXICON_BUTTONS_RU['settings_add_telegram'])
 async def add_telegram(message: Message, state: FSMContext):
     await message.answer(text=LEXICON_ANSWERS_RU['settings_add_telegram_menu'], reply_markup=settings_add_telegram_keyboard)
 
@@ -58,3 +58,9 @@ async def waiting_session_file(message: Message, state: FSMContext):
 async def add_telegram_session(message: Message, state: FSMContext):
     await state.set_state(FSMAuthState.start_auth)
     await auth_request_phone(message=message, state=state)
+
+
+@router.message(StateFilter(FSMSettingsState.waiting_choice), F.text == LEXICON_BUTTONS_RU['settings_delete_my_data'])
+async def settings_delete_my_data(message: Message, state: FSMContext, db: DB):
+    await delete_user_in_db(db, telegram_id=message.from_user.id)
+    await message.answer(text=LEXICON_ANSWERS_RU['settings_delete_my_data'])
