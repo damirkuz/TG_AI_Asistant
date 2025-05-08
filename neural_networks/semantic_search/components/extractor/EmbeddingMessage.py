@@ -1,5 +1,5 @@
 from typing import Any
-from TG_AI_Asistant.Entity.SemanticMessage import SemanticMessage
+from Entity.SemanticMessage import SemanticMessage
 
 
 class EmbeddingMessage:

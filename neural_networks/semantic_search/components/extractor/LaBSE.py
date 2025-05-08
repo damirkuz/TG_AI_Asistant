@@ -5,8 +5,8 @@ from numpy import ndarray
 from sentence_transformers import SentenceTransformer
 import faiss
 
-from TG_AI_Asistant.Entity.SemanticMessage import SemanticMessage
-from TG_AI_Asistant.neural_networks.semantic_search.components.extractor.EmbeddingMessage import EmbeddingMessage
+from Entity.SemanticMessage import SemanticMessage
+from neural_networks.semantic_search.components.extractor.EmbeddingMessage import EmbeddingMessage
 
 
 class LaBSeSentences:
