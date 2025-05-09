@@ -1,0 +1,24 @@
+from aiogram import Router, F
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
+
+
+from tg_bot.keyboards import main_menu_keyboard, main_menu_admin_keyboard
+from tg_bot.services import get_user_db
+from tg_bot.states import FSMMainMenu
+
+from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
+
+__all__ = ['router']
+
+
+router = Router()
+
+@router.message(F.text == LEXICON_BUTTONS_RU['back_to_main_menu'])
+async def process_accept_rules(message: Message, state: FSMContext):
+    user_db = await get_user_db(message.from_user.id)
+    if user_db.is_admin:
+        await message.answer(LEXICON_ANSWERS_RU['back_to_main_menu'], reply_markup=main_menu_admin_keyboard)
+    else:
+        await message.answer(LEXICON_ANSWERS_RU['back_to_main_menu'], reply_markup=main_menu_keyboard)
+    await state.set_state(FSMMainMenu.waiting_choice)
