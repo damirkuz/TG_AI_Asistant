@@ -12,7 +12,7 @@ from neural_networks.semantic_search.components.extractor.EmbeddingMessage impor
 class LaBSeSentences:
     def __init__(self, device="cpu"):
         self.device = device
-        self.model = SentenceTransformer('local_model/', device=device)
+        self.model = SentenceTransformer('sentence-transformers/LaBSE', device=device)
         #self.model.save("local_model/")
 
     def get_semantic_matches(self, query: str, messages: list, k: int) -> list[[EmbeddingMessage, int]]:
