@@ -54,8 +54,8 @@ async def start_tg_bot(config: Config):
     await set_main_menu(bot)
 
     logger.info('Подключаем роутеры')
-    dp.include_routers(firstly.router, commands.router, main_menu.router, admin.router, auth.router,
-                       settings_menu.router, other_messages.router)
+    dp.include_routers(firstly.router, commands.router, main_menu.router, auth.router,
+                       settings_menu.router, admin.router, other_messages.router)
 
     logger.info('Подключаем миддлвари')
     dp.message.outer_middleware(BanCheckMiddleware())

@@ -175,7 +175,7 @@ async def save_auth(
         if phone_number:
             phone_number = ''.join(filter(str.isdigit, phone_number)) or None
 
-        tg_account_row = await db.fetch_one("""
+        tg_account_id = await db.fetch_val("""
             INSERT INTO tg_accounts (tg_user_id, full_name, phone_number)
             VALUES ($1, $2, $3)
             ON CONFLICT (tg_user_id) DO UPDATE SET
@@ -184,11 +184,9 @@ async def save_auth(
             RETURNING id
         """, tg_user_id, full_name, phone_number)
 
-        if not tg_account_row:
+        if not tg_account_id:
             logger.error("Не удалось сохранить телеграм-аккаунт для bot_user_id=%s", bot_user_id)
             raise ValueError("Не удалось сохранить телеграм-аккаунт")
-
-        tg_account_id = tg_account_row["id"]
 
         await db.execute("""
             INSERT INTO account_sessions (

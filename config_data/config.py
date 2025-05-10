@@ -1,31 +1,31 @@
 from dataclasses import dataclass
-
+from pydantic import BaseModel
 from environs import Env
 
 __all__ = ["DatabaseConfig", "Config", "load_config", "TGAppConfig"]
 
 
-@dataclass
-class DatabaseConfig:
+
+class DatabaseConfig(BaseModel):
     database: str
     db_host: str
     db_user: str
     db_password: str
 
 
-@dataclass
-class TgBot:
+
+class TgBot(BaseModel):
     token: str
 
 
-@dataclass
-class TGAppConfig:
+
+class TGAppConfig(BaseModel):
     api_id: int
     api_hash: str
 
 
-@dataclass
-class Config:
+
+class Config(BaseModel):
     tg_app: TGAppConfig
     tg_bot: TgBot
     db: DatabaseConfig
