@@ -14,7 +14,7 @@ from tg_bot.states import FSMAuthState, FSMMainMenu
 from tg_bot.keyboards import create_reply_kb, main_menu_keyboard, main_menu_admin_keyboard
 
 from tg_bot.services.telethon_auth import auth_send_code, AuthStatesEnum, auth_enter_code, auth_enter_password
-from tg_bot.services.database import save_auth, DB
+from database import save_auth, DB
 
 __all__ = ['router', 'auth_request_phone']
 
@@ -126,7 +126,7 @@ async def end_auth(
     session_string = client.session.save()
     state_data = await state.get_data()
     await save_auth(db=db, client=client, session_string=session_string, password=password, bot_user_id=state_data.get('bot_user_id'))
-    user_db = await get_user_db(message.from_user.id)
+    user_db = await get_user_db(db=db, user_id=message.from_user.id)
     if user_db.is_admin:
         await message.answer(text=LEXICON_ANSWERS_RU['auth_successful'], reply_markup=main_menu_admin_keyboard)
     else:

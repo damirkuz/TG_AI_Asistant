@@ -3,12 +3,12 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.filters import CommandStart, Command, StateFilter
-from tg_bot.filters import IsRegistered, IsAdmin
+from tg_bot.filters import IsRegistered
 from tg_bot.keyboards import create_reply_kb, main_menu_keyboard, settings_add_telegram_keyboard
 from tg_bot.keyboards.reply_keyboards import main_menu_admin_keyboard
 from tg_bot.services import BotUserDB
-from tg_bot.services.database import DB
-from tg_bot.services.database.db_functions import save_bot_user
+from database import DB
+from database import save_bot_user
 from tg_bot.states import FSMRulesAgreement, FSMMainMenu, FSMSettingsState
 
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU

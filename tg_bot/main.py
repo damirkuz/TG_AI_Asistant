@@ -8,9 +8,10 @@ from aiogram.fsm.storage.redis import RedisStorage
 from redis.asyncio import Redis
 
 from config_data import Config
+from tg_bot.bot import TelegramBot
 from tg_bot.middlewares.ban_check_middleware import BanCheckMiddleware
 
-from tg_bot.services.database import db_create_pool, db_create_need_tables, DB
+from database import db_create_pool, db_create_need_tables, DB
 
 # Импортируем роутеры
 from tg_bot.handlers import commands, other_messages, auth, main_menu, settings_menu, firstly, admin
@@ -29,9 +30,11 @@ logger = logging.getLogger(__name__)
 async def start_tg_bot(config: Config):
     # Конфигурируем логирование
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(filename)s:%(lineno)d #%(levelname)-8s '
-               '[%(asctime)s] - %(name)s - %(message)s')
+        level=logging.DEBUG,
+        format='[{asctime}] #{levelname:8} {filename}:'
+               '{lineno} - {name} - {message}',
+        style='{'
+    )
 
     # Выводим в консоль информацию о начале запуска бота
     logger.info('Starting bot')
@@ -55,8 +58,11 @@ async def start_tg_bot(config: Config):
     db = DB(pool=pool)
     await db_create_need_tables(db=db)
 
+    # Создаём экземпляр TelegramBot
+    telegram_bot = TelegramBot(config=config, db=db, redis=redis)
+
     # Помещаем нужные объекты в workflow_data диспетчера
-    dp.workflow_data.update({'config': config, 'db': db, 'redis_client_storage': redis_client_storage})
+    dp.workflow_data.update({'config': config, 'db': db, 'redis_client_storage': redis_client_storage, 'telegram_bot': telegram_bot})
 
     # Настраиваем главное меню бота
     await set_main_menu(bot)

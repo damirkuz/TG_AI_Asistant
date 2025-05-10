@@ -2,13 +2,14 @@ from aiogram.filters import BaseFilter
 from aiogram.types import Message
 
 from tg_bot.services import get_user_db
-from tg_bot.services.database import BotUserDB
+from database import DB
+from database import BotUserDB
 __all__ = ["IsRegistered"]
 
 
 class IsRegistered(BaseFilter):
-    async def __call__(self, message: Message, user_db: BotUserDB = None) -> bool:
+    async def __call__(self, message: Message, db: DB, user_db: BotUserDB = None) -> bool:
         if user_db is None:
-            user_db = await get_user_db(message.from_user.id)
+            user_db = await get_user_db(db=db, user_id=message.from_user.id)
         return user_db is not None and user_db.is_active
 

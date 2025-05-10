@@ -2,8 +2,8 @@ from aiogram.types import Message
 from asyncpg import Record
 from telethon import TelegramClient
 from config_data import DatabaseConfig
-from tg_bot.services.database.db_classes import BotUserDB
-from tg_bot.services.database import DB
+from database.db_classes import BotUserDB
+from database import DB
 
 
 __all__ = [
@@ -318,12 +318,8 @@ async def get_user_tg_id_in_db(db: DB, user_message: Message) -> BotUserDB | boo
     if user_message.text.startswith('@'):
         username = user_message.text.lstrip('@')
 
-    # result = await db.fetch_one("""SELECT telegram_id, is_banned
-    #                                    FROM bot_users
-    #                                    WHERE telegram_id = $1 OR username = $2
-    #                                   """, telegram_id, username)
 
-    bot_user = await get_user_db(telegram_id, username)
+    bot_user = await get_user_db(db=db, user_id=telegram_id, username=username)
 
     return bot_user if bot_user else False
 

@@ -12,8 +12,9 @@ from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
 
 __all__ = ['router']
 
-from tg_bot.services import DB, BotUserDB
-from tg_bot.services.database.db_functions import get_bot_statistics, get_user_detailed, ban_bot_user, \
+from tg_bot.services import BotUserDB
+from database import DB
+from database import get_bot_statistics, get_user_detailed, ban_bot_user, \
     make_admin_bot_user
 
 from tg_bot.states.states import FSMAdminMenu

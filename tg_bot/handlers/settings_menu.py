@@ -8,7 +8,7 @@ from tg_bot.handlers.auth import auth_request_phone
 from tg_bot.keyboards.reply_keyboards import settings_add_telegram_keyboard, main_menu_keyboard, \
     main_menu_admin_keyboard
 from tg_bot.services import get_user_db
-from tg_bot.services.database import save_auth, DB, delete_user_in_db
+from database import save_auth, DB, delete_user_in_db
 from tg_bot.states import FSMSettingsState, FSMMainMenu, FSMAuthState
 from tg_bot.filters import IsCorrectSession
 
@@ -39,7 +39,7 @@ async def waiting_session_file(message: Message, state: FSMContext, client: Tele
     state_data = await state.get_data()
     await save_auth(client=client, db=db, session_string=session_string, bot_user_id=state_data.get('bot_user_id'))
     await message.answer(text=LEXICON_ANSWERS_RU['settings_add_telegram_session_good'])
-    user_db = await get_user_db(message.from_user.id)
+    user_db = await get_user_db(db=db, user_id=message.from_user.id)
     if user_db.is_admin:
         await message.answer(text=LEXICON_ANSWERS_RU['/start'], reply_markup=main_menu_admin_keyboard)
     else:

@@ -7,7 +7,7 @@ from telethon import TelegramClient
 import telethon.errors
 from telethon.sessions import StringSession
 
-from config_data import TGAppConfig
+from config_data.config import TGAppConfig
 import datetime
 from enum import Enum
 

@@ -5,11 +5,9 @@ from asyncpg import Pool, Record
 __all__ = ["DB"]
 
 class DB:
-    MAIN_INSTANCE = None
 
     def __init__(self, pool: Pool):
         self.pool = pool
-        type(self).MAIN_INSTANCE = self
 
     async def execute(self, sql: str, *args) -> str:
         """Выполнить SQL-запрос без возврата результата"""
@@ -30,7 +28,3 @@ class DB:
         """Получить список строк результата"""
         async with self.pool.acquire() as conn:
             return await conn.fetch(sql, *args)
-
-    @classmethod
-    def get_db(cls):
-        return cls.MAIN_INSTANCE

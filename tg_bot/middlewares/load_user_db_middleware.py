@@ -29,7 +29,8 @@ class LoadUserDbMiddleware(BaseMiddleware):
             try:
                 # Проверяем, не загружен ли user_db ранее
                 if "user_db" not in data:
-                    user_db = await get_user_db(event.from_user.id)
+                    db = data.get("db")
+                    user_db = await get_user_db(db=db, user_id=event.from_user.id)
                     data["user_db"] = user_db
             except Exception as e:
                 print(f"Ошибка БД: {e}")

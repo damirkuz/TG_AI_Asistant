@@ -3,8 +3,8 @@ from aiogram.types import Message
 
 __all__ = ["IsCorrectMessageUser"]
 
-from tg_bot.services import DB
-from tg_bot.services.database.db_functions import get_user_tg_id_in_db
+from database import DB
+from database import get_user_tg_id_in_db
 
 
 class IsCorrectMessageUser(BaseFilter):

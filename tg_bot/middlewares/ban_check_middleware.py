@@ -4,7 +4,6 @@ from typing import Dict, Any, Callable, Awaitable
 import time
 
 from tg_bot.lexicon import LEXICON_ANSWERS_RU
-from tg_bot.services import DB
 
 
 class BanCheckMiddleware(BaseMiddleware):
@@ -30,7 +29,7 @@ class BanCheckMiddleware(BaseMiddleware):
                 return await handler(event, data)
 
         # Запрос к БД только если нет в кэше или кэш устарел
-        db = DB.get_db()
+        db = data.get("db")
         is_banned = await db.fetch_val("SELECT is_banned FROM bot_users WHERE telegram_id = $1", user_id)
 
         if is_banned:
