@@ -7,11 +7,11 @@ from aiogram.types import Message, KeyboardButton, ReplyKeyboardRemove
 from telethon import TelegramClient
 
 from config_data import Config
-from database import save_auth, DB
+from database import save_auth
+from database.db_functions import get_user_db
 from tg_bot.filters.correct_data import CorrectPhone, CorrectOTPCode, CorrectPassword
 from tg_bot.keyboards import create_reply_kb, main_menu_keyboard, main_menu_admin_keyboard
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
-from tg_bot.services import get_user_db
 from tg_bot.services.redis_client_storage import RedisClientStorage
 from tg_bot.services.telethon_auth import auth_send_code, AuthStatesEnum, auth_enter_code, auth_enter_password
 from tg_bot.states import FSMAuthState, FSMMainMenu
@@ -73,7 +73,7 @@ async def auth_incorrect_phone(message: Message):
 
 
 @router.message(StateFilter(FSMAuthState.waiting_for_code), CorrectOTPCode())
-async def auth_process_code(message: Message, state: FSMContext, code: str, db: DB,
+async def auth_process_code(message: Message, state: FSMContext, code: str,
                             redis_client_storage: RedisClientStorage, config: Config):
     logger.info("Пользователь %s (%d) ввёл код: %s", message.from_user.username, message.from_user.id, code)
     state_data = await state.get_data()
@@ -89,7 +89,7 @@ async def auth_process_code(message: Message, state: FSMContext, code: str, db: 
     match result:
         case AuthStatesEnum.CodeValid:
             logger.info("Код подтверждён для пользователя %d", message.from_user.id)
-            await end_auth(message=message, state=state, client=client, db=db)
+            await end_auth(message=message, state=state, client=client)
             return
         case AuthStatesEnum.CodeInvalid:
             logger.warning("Введён неверный код для пользователя %d", message.from_user.id)
@@ -120,7 +120,6 @@ async def auth_process_code(
         message: Message,
         state: FSMContext,
         password: str,
-        db: DB,
         redis_client_storage: RedisClientStorage,
         config: Config):
     logger.info("Пользователь %s (%d) вводит пароль", message.from_user.username, message.from_user.id)
@@ -138,7 +137,7 @@ async def auth_process_code(
     match result:
         case AuthStatesEnum.PasswordValid:
             logger.info("Пароль подтверждён для пользователя %d", message.from_user.id)
-            await end_auth(message=message, state=state, client=client, db=db, password=password)
+            await end_auth(message=message, state=state, client=client, password=password)
             return
         case AuthStatesEnum.PasswordInvalid:
             logger.warning("Введён неверный пароль для пользователя %d", message.from_user.id)
@@ -149,15 +148,14 @@ async def end_auth(
         message: Message,
         state: FSMContext,
         client: TelegramClient,
-        db: DB,
         password: str = None):
     logger.info("Авторизация завершена для пользователя %s (%d)", message.from_user.username, message.from_user.id)
     session_string = client.session.save()
     state_data = await state.get_data()
-    await save_auth(db=db, client=client, session_string=session_string, password=password,
+    await save_auth(client=client, session_string=session_string, password=password,
                     bot_user_id=state_data.get('bot_user_id'))
     logger.debug("Сессия пользователя %d сохранена в базе", message.from_user.id)
-    user_db = await get_user_db(db=db, user_id=message.from_user.id)
+    user_db = await get_user_db(user_id=message.from_user.id)
     if user_db.is_admin:
         logger.info("Пользователь %s (%d) - админ, отправлена админ-меню", message.from_user.username,
                     message.from_user.id)

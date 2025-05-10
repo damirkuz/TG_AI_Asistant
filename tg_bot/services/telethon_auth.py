@@ -11,7 +11,7 @@ from config_data.config import TGAppConfig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["auth_send_code", "auth_enter_code", "auth_enter_password"]
+__all__ = ["auth_send_code", "auth_enter_code", "auth_enter_password", "AuthStatesEnum"]
 
 
 class AuthStatesEnum(Enum):

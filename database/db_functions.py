@@ -1,163 +1,21 @@
 import logging
 
-from aiogram.types import Message
-from asyncpg import Record
+from sqlalchemy import select, update, func, or_, text
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import SQLAlchemyError
 from telethon import TelegramClient
 
-from config_data import DatabaseConfig
-from database import DB
-from database.db_classes import BotUserDB
-
-__all__ = [
-    "db_create_pool",
-    "db_create_need_tables",
-    "save_auth",
-    "save_bot_user",
-    "get_bot_statistics",
-    "get_user_tg_id_in_db",
-    "get_user_detailed",
-    "ban_bot_user",
-    "make_admin_bot_user",
-    "delete_user_in_db"]
-
-import asyncpg
+from database import BotUserDB
+from database.db_core import async_session_maker  # Фабрика сессий
+from database.models import BotUser, TGAccount, AccountSession, Statistic
 
 logger = logging.getLogger(__name__)
 
-async def db_create_pool(db_config: DatabaseConfig) -> asyncpg.Pool:
-    try:
-        logger.info("Создание пула соединений с БД: %s@%s/%s", db_config.db_user, db_config.db_host, db_config.database)
-        return await asyncpg.create_pool(
-            user=db_config.db_user,
-            password=db_config.db_password,
-            database=db_config.database,
-            host=db_config.db_host,
-            min_size=1,
-            max_size=5,
-            ssl=None
-        )
-    except Exception as e:
-        logger.error(f"Ошибка подключения к базе данных: {e}")
-        print(f"Ошибка подключения к базе данных: {e}")
-
-async def db_create_need_tables(db: DB) -> None:
-    logger.info("Создание необходимых таблиц в базе данных")
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS bot_users (
-            id BIGSERIAL PRIMARY KEY,
-            telegram_id BIGINT UNIQUE NOT NULL,
-            username TEXT,
-            full_name TEXT,
-            is_admin BOOLEAN DEFAULT FALSE,
-            is_active BOOLEAN DEFAULT TRUE,
-            is_banned BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT now()
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS tg_accounts (
-            id BIGSERIAL PRIMARY KEY,
-            tg_user_id BIGINT UNIQUE NOT NULL,
-            full_name TEXT,
-            phone_number TEXT,
-            created_at TIMESTAMP DEFAULT now()
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS account_sessions (
-            id BIGSERIAL PRIMARY KEY,
-            bot_user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
-            tg_account_id BIGINT REFERENCES tg_accounts(id) ON DELETE CASCADE,
-            session_data TEXT NOT NULL,
-            password TEXT,
-            created_at TIMESTAMP DEFAULT now(),
-            UNIQUE (bot_user_id, tg_account_id)
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS chats (
-            id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
-            chat_id BIGINT UNIQUE,
-            title TEXT,
-            type TEXT,
-            last_updated TIMESTAMP
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
-            id BIGSERIAL PRIMARY KEY,
-            chat_id BIGINT REFERENCES chats(chat_id) ON DELETE CASCADE,
-            user_id BIGINT REFERENCES bot_users(id) ON DELETE SET NULL,
-            telegram_id BIGINT,
-            text TEXT,
-            date TIMESTAMP
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS dossiers (
-            id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
-            target_user_id BIGINT,
-            chat_id BIGINT,
-            summary_md TEXT,
-            created_at TIMESTAMP DEFAULT now()
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS settings (
-            id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
-            openai_key TEXT,
-            llm_model TEXT
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS statistics (
-            id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT REFERENCES bot_users(id) ON DELETE SET NULL,
-            action TEXT,
-            created_at TIMESTAMP DEFAULT now(),
-            details JSONB
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS api_keys (
-            id BIGSERIAL PRIMARY KEY,
-            service TEXT,
-            key TEXT,
-            is_active BOOLEAN DEFAULT TRUE,
-            created_at TIMESTAMP
-        );
-    """)
-
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS queries (
-            id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT REFERENCES bot_users(id) ON DELETE CASCADE,
-            query_text TEXT NOT NULL,
-            context_source TEXT,
-            context_size INTEGER,
-            response_text TEXT,
-            model_used TEXT,
-            created_at TIMESTAMP DEFAULT now()
-        );
-    """)
-    logger.info("Все необходимые таблицы созданы или уже существуют")
 
 async def save_auth(
         client: TelegramClient,
-        db: DB,
-        session_string: str,
         bot_user_id: int,
+        session_string: str,
         password: str = None
 ) -> None:
     """
@@ -171,49 +29,55 @@ async def save_auth(
                 None, [
                     about_me.first_name, about_me.last_name])).strip()
         phone_number = about_me.phone
-
         if phone_number:
             phone_number = ''.join(filter(str.isdigit, phone_number)) or None
 
-        tg_account_id = await db.fetch_val("""
-            INSERT INTO tg_accounts (tg_user_id, full_name, phone_number)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (tg_user_id) DO UPDATE SET
-                full_name = EXCLUDED.full_name,
-                phone_number = EXCLUDED.phone_number
-            RETURNING id
-        """, tg_user_id, full_name, phone_number)
+        async with async_session_maker() as session:
+            # TGAccount upsert
+            stmt = insert(TGAccount).values(
+                tg_user_id=tg_user_id,
+                full_name=full_name,
+                phone_number=phone_number
+            ).on_conflict_do_update(
+                index_elements=[TGAccount.tg_user_id],
+                set_={
+                    "full_name": full_name,
+                    "phone_number": phone_number
+                }
+            ).returning(TGAccount.id)
+            result = await session.execute(stmt)
+            tg_account_id = result.scalar_one()
 
-        if not tg_account_id:
-            logger.error("Не удалось сохранить телеграм-аккаунт для bot_user_id=%s", bot_user_id)
-            raise ValueError("Не удалось сохранить телеграм-аккаунт")
-
-        await db.execute("""
-            INSERT INTO account_sessions (
+            # AccountSession upsert
+            stmt2 = insert(AccountSession).values(
+                bot_user_id=bot_user_id,
+                tg_account_id=tg_account_id,
+                session_data=session_string,
+                password=password).on_conflict_do_update(
+                index_elements=[
+                    AccountSession.bot_user_id,
+                    AccountSession.tg_account_id],
+                set_={
+                    "session_data": session_string,
+                    "password": password})
+            await session.execute(stmt2)
+            await session.commit()
+            logger.info(
+                "Данные аутентификации сохранены для bot_user_id=%s, tg_account_id=%s",
                 bot_user_id,
-                tg_account_id,
-                session_data,
-                password
-            )
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (bot_user_id, tg_account_id) DO UPDATE SET
-                session_data = EXCLUDED.session_data,
-                password = EXCLUDED.password
-        """, bot_user_id, tg_account_id, session_string, password)
-        logger.info("Данные аутентификации сохранены для bot_user_id=%s, tg_account_id=%s", bot_user_id, tg_account_id)
+                tg_account_id)
 
-    except asyncpg.ForeignKeyViolationError as e:
-        logger.error("Неверный bot_user_id: %s", bot_user_id)
-        raise ValueError(f"Неверный bot_user_id: {bot_user_id}") from e
-    except asyncpg.PostgresError as e:
-        logger.error("Ошибка базы данных при сохранении аутентификации: %s", str(e))
+    except SQLAlchemyError as e:
+        logger.error(
+            "Ошибка базы данных при сохранении аутентификации: %s",
+            str(e))
         raise ValueError(f"Ошибка базы данных: {str(e)}") from e
     except Exception as e:
         logger.error("Ошибка сохранения данных аутентификации: %s", str(e))
         raise ValueError(f"Ошибка сохранения данных: {str(e)}") from e
 
+
 async def save_bot_user(
-        db: DB,
         telegram_id: int,
         full_name: str,
         username: str | None = None,
@@ -225,144 +89,212 @@ async def save_bot_user(
     Сохраняет или обновляет пользователя бота в таблице bot_users.
     """
     try:
-        user_row = await db.fetch_one(
-            """
-            INSERT INTO bot_users (
-                telegram_id,
-                full_name,
-                username,
-                is_admin,
-                is_active,
-                is_banned
-            )
-            VALUES ($1, $2, $3, $4, $5, $6)
-            ON CONFLICT (telegram_id) DO UPDATE SET
-                full_name = EXCLUDED.full_name,
-                username = EXCLUDED.username,
-                is_active = EXCLUDED.is_active,
-                is_banned = EXCLUDED.is_banned
-            RETURNING id
-            """,
-            telegram_id,
-            full_name.strip(),
-            username,
-            is_admin,
-            is_active,
-            is_banned
-        )
+        async with async_session_maker() as session:
+            stmt = insert(BotUser).values(
+                telegram_id=telegram_id,
+                full_name=full_name.strip(),
+                username=username,
+                is_admin=is_admin,
+                is_active=is_active,
+                is_banned=is_banned
+            ).on_conflict_do_update(
+                index_elements=[BotUser.telegram_id],
+                set_={
+                    "full_name": full_name.strip(),
+                    "username": username,
+                    "is_active": is_active,
+                    "is_banned": is_banned
+                }
+            ).returning(BotUser.id)
+            result = await session.execute(stmt)
+            user_id = result.scalar_one()
+            await session.commit()
+            logger.info(
+                "Пользователь telegram_id=%s успешно сохранён/обновлён",
+                telegram_id)
+            return user_id
 
-        if not user_row:
-            logger.error("Ошибка при сохранении пользователя telegram_id=%s", telegram_id)
-            raise ValueError("Ошибка при сохранении пользователя")
-
-        logger.info("Пользователь telegram_id=%s успешно сохранён/обновлён", telegram_id)
-        return user_row["id"]
-
-    except asyncpg.PostgresError as e:
-        logger.error("Ошибка базы данных при сохранении пользователя: %s", str(e))
+    except SQLAlchemyError as e:
+        logger.error(
+            "Ошибка базы данных при сохранении пользователя: %s",
+            str(e))
         raise ValueError(f"Ошибка базы данных: {str(e)}") from e
     except Exception as e:
-        logger.error("Неожиданная ошибка при сохранении пользователя: %s", str(e))
+        logger.error(
+            "Неожиданная ошибка при сохранении пользователя: %s",
+            str(e))
         raise ValueError(f"Неожиданная ошибка: {str(e)}") from e
 
-async def get_bot_statistics(db: DB) -> Record:
+
+async def get_bot_statistics() -> dict:
     """
     Получает статистику о пользователях бота
     """
-    logger.debug("Запрос статистики пользователей бота")
-    return await db.fetch_one("""SELECT
-                                (SELECT COUNT(*) FROM bot_users) AS registered_users,
-                                (SELECT COUNT(*) FROM tg_accounts) AS connected_accounts,
-                                (SELECT COUNT(*) FROM statistics) AS total_activity,
-                                (SELECT COUNT(*) FROM statistics WHERE created_at >= NOW() - INTERVAL '1 day') AS daily_activity;
-        """)
 
-async def get_user_tg_id_in_db(db: DB, user_message: Message) -> BotUserDB | bool:
-    """
-    Проверяет есть ли пользователь в базе данных (bot_users), возвращает его BotUserDB
-    """
-    from tg_bot.services import get_user_db
-    telegram_id = 0
-    username = ""
-    if user_message.contact:
-        telegram_id = user_message.contact.id
+    interval_str = '1 day'
+    async with async_session_maker() as session:
+        registered_users = await session.scalar(select(func.count()).select_from(BotUser))
+        connected_accounts = await session.scalar(select(func.count()).select_from(TGAccount))
+        total_activity = await session.scalar(select(func.count()).select_from(Statistic))
+        daily_activity = await session.scalar(
+            select(func.count()).select_from(Statistic).where(
+                Statistic.created_at >= func.now() - text(f"interval '{interval_str}'")
+            )
+        )
 
-    if user_message.text.isdigit():
-        telegram_id = int(user_message.text)
+        return {
+            "registered_users": registered_users,
+            "connected_accounts": connected_accounts,
+            "total_activity": total_activity,
+            "daily_activity": daily_activity
+        }
 
-    if user_message.text.startswith('@'):
-        username = user_message.text.lstrip('@')
 
-    logger.debug("Запрос BotUserDB по telegram_id=%s, username=%s", telegram_id, username)
-    bot_user = await get_user_db(db=db, user_id=telegram_id, username=username)
+# async def get_user_tg_id_in_db(user_message: Message) -> BotUserDB | None:
+#     """
+#     Проверяет есть ли пользователь в базе данных (bot_users), возвращает его BotUserDB
+#     """
+#     telegram_id = None
+#     username = None
+#     if user_message.contact:
+#         telegram_id = user_message.contact.id
+#     elif user_message.text.isdigit():
+#         telegram_id = int(user_message.text)
+#     elif user_message.text.startswith('@'):
+#         username = user_message.text.lstrip('@')
+#
+#     async with async_session_maker() as session:
+#         if telegram_id:
+#             stmt = select(BotUser).where(BotUser.telegram_id == telegram_id)
+#         elif username:
+#             stmt = select(BotUser).where(BotUser.username == username)
+#         else:
+#             return None
+#         result = await session.execute(stmt)
+#         bot_user = result.scalar_one_or_none()
+#         if bot_user:
+#             logger.info(
+#                 "Пользователь найден в базе: telegram_id=%s, username=%s",
+#                 telegram_id,
+#                 username)
+#         else:
+#             logger.warning(
+#                 "Пользователь не найден в базе: telegram_id=%s, username=%s",
+#                 telegram_id,
+#                 username)
+#         return BotUserDB.model_validate(bot_user) if bot_user else None
 
-    if bot_user:
-        logger.info("Пользователь найден в базе: telegram_id=%s, username=%s", telegram_id, username)
-    else:
-        logger.warning("Пользователь не найден в базе: telegram_id=%s, username=%s", telegram_id, username)
 
-    return bot_user if bot_user else False
-
-async def get_user_detailed(db: DB, telegram_id: int) -> dict:
+async def get_user_detailed(telegram_id: int) -> dict | None:
     """
     Возвращает подробную информацию о пользователе из базы
     """
-    logger.debug("Запрос подробной информации о пользователе telegram_id=%s", telegram_id)
-    result1 = await db.fetch_one("""SELECT *
-                                   FROM bot_users
-                                   WHERE telegram_id = $1
-                                    """, telegram_id)
-    bot_user_id = result1["id"]
-
-    result2 = await db.fetch_one("""SELECT *
-                                       FROM tg_accounts
-                                       WHERE id = $1
-                                        """, bot_user_id)
-
-    if result2:
+    async with async_session_maker() as session:
+        result1 = await session.execute(select(BotUser).where(BotUser.telegram_id == telegram_id))
+        bot_user = result1.scalar_one_or_none()
+        if not bot_user:
+            return None
+        result2 = await session.execute(select(TGAccount).where(TGAccount.tg_user_id == bot_user.telegram_id))
+        tg_account = result2.scalar_one_or_none()
         merged = {
             "bot_user": {
-                "id": result1["id"],
-                "telegram_id": result1["telegram_id"],
-                "username": result1["username"],
-                "full_name": result1["full_name"],
-                "is_admin": result1["is_admin"],
-                "is_active": result1["is_active"],
-                "is_banned": result1["is_banned"],
-                "created_at": result1["created_at"],
+                "id": bot_user.id,
+                "telegram_id": bot_user.telegram_id,
+                "username": bot_user.username,
+                "full_name": bot_user.full_name,
+                "is_admin": bot_user.is_admin,
+                "is_active": bot_user.is_active,
+                "is_banned": bot_user.is_banned,
+                "created_at": bot_user.created_at,
             },
             "tg_account": {
-                "id": result2["id"],
-                "tg_user_id": result2["tg_user_id"],
-                "full_name": result2["full_name"],
-                "phone_number": result2["phone_number"],
-                "created_at": result2["created_at"],
-            }
+                "id": tg_account.id,
+                "tg_user_id": tg_account.tg_user_id,
+                "full_name": tg_account.full_name,
+                "phone_number": tg_account.phone_number,
+                "created_at": tg_account.created_at,
+            } if tg_account else None
         }
-        logger.info("Подробная информация о пользователе telegram_id=%s получена (есть аккаунт)", telegram_id)
-    else:
-        merged = {"bot_user": dict(result1), "tg_account": None}
-        logger.info("Подробная информация о пользователе telegram_id=%s получена (аккаунта нет)", telegram_id)
+        logger.info(
+            "Подробная информация о пользователе telegram_id=%s получена",
+            telegram_id)
+        return merged
 
-    return merged
 
-async def ban_bot_user(db: DB, telegram_id: int, ban: bool = True) -> None:
-    from tg_bot.middlewares.ban_check_middleware import BanCheckMiddleware
-    BanCheckMiddleware.clear_user_cache(telegram_id)
-    logger.info("Изменение статуса бана для пользователя telegram_id=%s -> %s", telegram_id, ban)
-    await db.execute("""UPDATE bot_users
-                        SET is_banned = $1
-                        WHERE telegram_id = $2
-                    """, ban, telegram_id)
+async def ban_bot_user(telegram_id: int, ban: bool = True) -> None:
+    async with async_session_maker() as session:
+        stmt = update(BotUser).where(
+            BotUser.telegram_id == telegram_id).values(
+            is_banned=ban)
+        await session.execute(stmt)
+        await session.commit()
+        from tg_bot.middlewares.ban_check_middleware import BanCheckMiddleware
+        BanCheckMiddleware.clear_user_cache(telegram_id)
+        logger.info(
+            "Изменение статуса бана для пользователя telegram_id=%s -> %s",
+            telegram_id,
+            ban)
 
-async def make_admin_bot_user(db: DB, telegram_id: int, make_admin: bool = True) -> None:
-    logger.info("Изменение статуса администратора для пользователя telegram_id=%s -> %s", telegram_id, make_admin)
-    await db.execute("""UPDATE bot_users
-                        SET is_admin = $1
-                        WHERE telegram_id = $2
-                    """, make_admin, telegram_id)
 
-async def delete_user_in_db(db: DB, telegram_id: int) -> None:
-    logger.info("Удаление пользователя из базы telegram_id=%s", telegram_id)
-    await db.execute("""DELETE FROM bot_users
-                        WHERE telegram_id = $1""", telegram_id)
+async def make_admin_bot_user(
+        telegram_id: int,
+        make_admin: bool = True) -> None:
+    async with async_session_maker() as session:
+        stmt = update(BotUser).where(
+            BotUser.telegram_id == telegram_id).values(
+            is_admin=make_admin)
+        await session.execute(stmt)
+        await session.commit()
+        logger.info(
+            "Изменение статуса администратора для пользователя telegram_id=%s -> %s",
+            telegram_id,
+            make_admin)
+
+
+async def delete_user_in_db(telegram_id: int) -> None:
+    async with async_session_maker() as session:
+        stmt = select(BotUser).where(BotUser.telegram_id == telegram_id)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user:
+            await session.delete(user)
+            await session.commit()
+            logger.info(
+                "Удаление пользователя из базы telegram_id=%s",
+                telegram_id)
+
+
+async def get_user_db(
+        user_id: int = None,
+        username: str = None) -> BotUserDB | None:
+    logger.debug(
+        "Запрос пользователя из БД: user_id=%s, username=%s",
+        user_id,
+        username)
+    async with async_session_maker() as session:
+        # Формируем условия динамически
+        conditions = []
+        if user_id is not None:
+            conditions.append(BotUser.telegram_id == user_id)
+        if username is not None:
+            conditions.append(BotUser.username == username)
+
+        if not conditions:
+            logger.warning("Не передан ни user_id, ни username")
+            return None
+
+        stmt = select(BotUser).where(
+            or_(*conditions)) if len(conditions) > 1 else select(BotUser).where(*conditions)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user:
+            logger.info(
+                "Пользователь найден в БД: user_id=%s, username=%s",
+                user_id,
+                username)
+        else:
+            logger.warning(
+                "Пользователь не найден в БД: user_id=%s, username=%s",
+                user_id,
+                username)
+        return BotUserDB.model_validate(user, from_attributes=True) if user else None

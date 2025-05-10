@@ -1,9 +1,7 @@
-from dataclasses import dataclass
-from pydantic import BaseModel
 from environs import Env
+from pydantic import BaseModel
 
-__all__ = ["DatabaseConfig", "Config", "load_config", "TGAppConfig"]
-
+__all__ = ["DatabaseConfig", "Config", "load_config", "TGAppConfig", "get_database_url", "get_sync_database_url"]
 
 
 class DatabaseConfig(BaseModel):
@@ -13,16 +11,13 @@ class DatabaseConfig(BaseModel):
     db_password: str
 
 
-
 class TgBot(BaseModel):
     token: str
-
 
 
 class TGAppConfig(BaseModel):
     api_id: int
     api_hash: str
-
 
 
 class Config(BaseModel):
@@ -47,3 +42,23 @@ def load_config(path: str | None = None) -> Config:
             db_host=env("DB_HOST"),
             db_user=env("DB_USER"),
             db_password=env("DB_PASSWORD")))
+
+
+def get_database_url() -> str:
+    config = load_config()
+    url = "postgresql+asyncpg://{user}:{password}@{host}:5432/{db_name}".format(
+        user=config.db.db_user,
+        password=config.db.db_password,
+        host=config.db.db_host,
+        db_name=config.db.database)
+    return url
+
+
+def get_sync_database_url() -> str:
+    config = load_config()
+    url = "postgresql://{user}:{password}@{host}:5432/{db_name}".format(
+        user=config.db.db_user,
+        password=config.db.db_password,
+        host=config.db.db_host,
+        db_name=config.db.database)
+    return url

@@ -6,13 +6,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from telethon import TelegramClient
 
-from database import save_auth, DB, delete_user_in_db
+from database import save_auth, delete_user_in_db
+from database.db_functions import get_user_db
 from tg_bot.filters import IsCorrectSession
 from tg_bot.handlers.auth import auth_request_phone
 from tg_bot.keyboards.reply_keyboards import settings_add_telegram_keyboard, main_menu_keyboard, \
     main_menu_admin_keyboard
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
-from tg_bot.services import get_user_db
 from tg_bot.states import FSMSettingsState, FSMMainMenu, FSMAuthState
 
 __all__ = ['router']
@@ -42,15 +42,14 @@ async def add_telegram_session(message: Message, state: FSMContext):
 
 
 @router.message(StateFilter(FSMSettingsState.waiting_session_file), IsCorrectSession())
-async def waiting_session_file(message: Message, state: FSMContext, client: TelegramClient, session_string: str,
-                               db: DB):
+async def waiting_session_file(message: Message, state: FSMContext, client: TelegramClient, session_string: str):
     logger.info("Пользователь %s (%d) загрузил корректный session-файл", message.from_user.username,
                 message.from_user.id)
     state_data = await state.get_data()
-    await save_auth(client=client, db=db, session_string=session_string, bot_user_id=state_data.get('bot_user_id'))
+    await save_auth(client=client, session_string=session_string, bot_user_id=state_data.get('bot_user_id'))
     logger.debug("Сессия пользователя %d сохранена в базе", message.from_user.id)
     await message.answer(text=LEXICON_ANSWERS_RU['settings_add_telegram_session_good'])
-    user_db = await get_user_db(db=db, user_id=message.from_user.id)
+    user_db = await get_user_db(user_id=message.from_user.id)
     if user_db.is_admin:
         logger.info("Пользователь %s (%d) - админ, возвращается в админ-меню", message.from_user.username,
                     message.from_user.id)
@@ -81,8 +80,8 @@ async def add_telegram_session(message: Message, state: FSMContext):
 
 
 @router.message(StateFilter(FSMSettingsState.waiting_choice), F.text == LEXICON_BUTTONS_RU['settings_delete_my_data'])
-async def settings_delete_my_data(message: Message, state: FSMContext, db: DB):
+async def settings_delete_my_data(message: Message, state: FSMContext):
     logger.info("Пользователь %s (%d) запросил удаление своих данных", message.from_user.username, message.from_user.id)
-    await delete_user_in_db(db, telegram_id=message.from_user.id)
+    await delete_user_in_db(telegram_id=message.from_user.id)
     logger.debug("Данные пользователя %d удалены из базы", message.from_user.id)
     await message.answer(text=LEXICON_ANSWERS_RU['settings_delete_my_data'])

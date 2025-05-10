@@ -6,15 +6,14 @@ from aiogram.filters import StateFilter, or_f
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-from database import DB
 from database import get_bot_statistics, get_user_detailed, ban_bot_user, \
     make_admin_bot_user
+from database.db_classes import BotUserDB
 from tg_bot.filters import IsAdmin, IsNotBanned
 from tg_bot.filters.is_correct_message_user import IsCorrectMessageUser
 from tg_bot.keyboards import admin_menu_keyboard
 from tg_bot.keyboards.inline_keyboards import get_admin_users_panel
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
-from tg_bot.services import BotUserDB
 from tg_bot.states.states import FSMAdminMenu
 
 __all__ = ['router']
@@ -38,10 +37,10 @@ async def admin_menu_start(message: Message, state: FSMContext):
 
 @router.message(StateFilter(FSMAdminMenu.waiting_choice),
                 F.text == LEXICON_BUTTONS_RU['admin_statistics'])
-async def process_admin_menu_statistics(message: Message, db: DB):
+async def process_admin_menu_statistics(message: Message):
     logger.info("Админ %s запросил статистику", message.from_user.username)
     try:
-        result = await get_bot_statistics(db)
+        result = await get_bot_statistics()
         logger.debug("Статистика получена: %s", result)
     except Exception as e:
         logger.exception("Ошибка при получении статистики: %s", e)
@@ -94,12 +93,11 @@ async def process_admin_menu_find_user(message: Message, state: FSMContext):
 @router.callback_query(F.data == 'admin_users_panel_detailed')
 async def admin_users_panel_detailed(
         callback: CallbackQuery,
-        state: FSMContext,
-        db: DB):
+        state: FSMContext):
     bot_user = await get_bot_user_from_state(state)
     logger.info("Админ %s смотрит детали пользователя %s (%d)", callback.from_user.username, bot_user.username,
                 bot_user.telegram_id)
-    about_user: dict = await get_user_detailed(db, bot_user.telegram_id)
+    about_user: dict = await get_user_detailed(bot_user.telegram_id)
     about_bot_user = about_user.get('bot_user')
     about_tg_account = about_user.get('tg_account')
     await callback.message.answer(
@@ -127,14 +125,14 @@ async def admin_users_panel_detailed(
 @router.callback_query(or_f(F.data == 'admin_users_panel_ban',
                             F.data == 'admin_users_panel_unban'))
 async def admin_users_panel_detailed_banning(
-        callback: CallbackQuery, state: FSMContext, db: DB):
+        callback: CallbackQuery, state: FSMContext):
     bot_user = await get_bot_user_from_state(state)
     ban_bool = callback.data == 'admin_users_panel_ban'
     logger.info("Админ %s %s пользователя %s (%d)",
                 callback.from_user.username,
                 "банит" if ban_bool else "разбанивает",
                 bot_user.username, bot_user.telegram_id)
-    await ban_bot_user(db, bot_user.telegram_id, ban_bool)
+    await ban_bot_user(bot_user.telegram_id, ban_bool)
     admin_users_panel = get_admin_users_panel(
         is_banned=ban_bool, is_admin=bot_user.is_admin)
     if ban_bool:
@@ -147,14 +145,14 @@ async def admin_users_panel_detailed_banning(
 @router.callback_query(or_f(F.data == 'admin_users_panel_make_admin',
                             F.data == 'admin_users_panel_unmake_admin'))
 async def admin_users_panel_detailed_banning(
-        callback: CallbackQuery, state: FSMContext, db: DB):
+        callback: CallbackQuery, state: FSMContext):
     bot_user: BotUserDB = await get_bot_user_from_state(state)
     admin_bool = callback.data == 'admin_users_panel_make_admin'
     logger.info("Админ %s %s пользователя %s (%d) как администратора",
                 callback.from_user.username,
                 "назначает" if admin_bool else "снимает",
                 bot_user.username, bot_user.telegram_id)
-    await make_admin_bot_user(db, bot_user.telegram_id, admin_bool)
+    await make_admin_bot_user(bot_user.telegram_id, admin_bool)
     admin_users_panel = get_admin_users_panel(
         is_banned=bot_user.is_banned, is_admin=admin_bool)
     if admin_bool:

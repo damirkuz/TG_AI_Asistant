@@ -6,13 +6,12 @@ from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from database import DB
 from database import save_bot_user
+from database.db_classes import BotUserDB
 from tg_bot.filters import IsRegistered
 from tg_bot.keyboards import create_reply_kb, main_menu_keyboard, settings_add_telegram_keyboard
 from tg_bot.keyboards.reply_keyboards import main_menu_admin_keyboard
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
-from tg_bot.services import BotUserDB
 from tg_bot.states import FSMRulesAgreement, FSMMainMenu, FSMSettingsState
 
 __all__ = ['router']
@@ -52,11 +51,11 @@ async def process_start_command(message: Message, state: FSMContext):
 # логично оставить её там, где вызывается.
 @router.message(StateFilter(FSMRulesAgreement.waiting_for_agree),
                 F.text == LEXICON_BUTTONS_RU['accept_rules'])
-async def process_accept_rules(message: Message, state: FSMContext, db: DB):
+async def process_accept_rules(message: Message, state: FSMContext):
     logger.info("Пользователь %s (%d) согласился с правилами", message.from_user.username, message.from_user.id)
     await message.answer(text=LEXICON_ANSWERS_RU['accept_success'])
     # сохраняем пользователя в бд
-    bot_user_id = await save_bot_user(db=db, telegram_id=message.from_user.id, full_name=message.from_user.full_name,
+    bot_user_id = await save_bot_user(telegram_id=message.from_user.id, full_name=message.from_user.full_name,
                                       username=message.from_user.username)
     logger.debug("Пользователь %s (%d) сохранён в базе с bot_user_id=%s", message.from_user.username,
                  message.from_user.id, bot_user_id)

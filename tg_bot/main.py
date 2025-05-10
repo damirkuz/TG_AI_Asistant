@@ -7,7 +7,6 @@ from aiogram.fsm.storage.redis import RedisStorage
 from redis.asyncio import Redis
 
 from config_data import Config
-from database import db_create_pool, db_create_need_tables, DB
 from tg_bot.bot import TelegramBot
 # Импортируем роутеры
 from tg_bot.handlers import commands, other_messages, auth, main_menu, settings_menu, firstly, admin
@@ -40,15 +39,15 @@ async def start_tg_bot(config: Config):
     )
     dp = Dispatcher(storage=storage)
 
-    logger.info('Настраиваем базу данных')
-    pool = await db_create_pool(db_config=config.db)
-    db = DB(pool=pool)
-    await db_create_need_tables(db=db)
+    # logger.info('Настраиваем базу данных')
+    # pool = await db_create_pool(db_config=config.db)
+    # db = DB(pool=pool)
+    # await db_create_need_tables(db=db)
 
-    telegram_bot = TelegramBot(config=config, db=db, redis=redis)
+    telegram_bot = TelegramBot(config=config, redis=redis)
 
     dp.workflow_data.update(
-        {'config': config, 'db': db, 'redis_client_storage': redis_client_storage, 'telegram_bot': telegram_bot})
+        {'config': config, 'redis_client_storage': redis_client_storage, 'telegram_bot': telegram_bot})
 
     logger.info("Настраиваем меню у бота")
     await set_main_menu(bot)

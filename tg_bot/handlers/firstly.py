@@ -4,10 +4,9 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from database import DB
+from database.db_functions import get_user_db
 from tg_bot.keyboards import main_menu_keyboard, main_menu_admin_keyboard
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
-from tg_bot.services import get_user_db
 from tg_bot.states import FSMMainMenu
 
 __all__ = ['router']
@@ -18,9 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.message(F.text == LEXICON_BUTTONS_RU['back_to_main_menu'])
-async def process_accept_rules(message: Message, state: FSMContext, db: DB):
+async def process_accept_rules(message: Message, state: FSMContext):
     logger.info("Пользователь %s (%d) выбрал возврат в главное меню", message.from_user.username, message.from_user.id)
-    user_db = await get_user_db(db=db, user_id=message.from_user.id)
+    user_db = await get_user_db(user_id=message.from_user.id)
     if user_db.is_admin:
         logger.debug("Пользователь %s (%d) является админом, отправляется админ-меню", message.from_user.username,
                      message.from_user.id)
