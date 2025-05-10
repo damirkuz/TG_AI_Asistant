@@ -1,8 +1,9 @@
 import datetime
 from enum import Enum, auto
+
 from Entity.SemanticMessage import SemanticMessage
 from neural_networks.semantic_search.components.extractor.LaBSE import LaBSeSentences
-from neural_networks.semantic_search.components.extractor.EmbeddingMessage import EmbeddingMessage
+
 
 class SearchMode(Enum):
     """Режимы работы семантического поиска.

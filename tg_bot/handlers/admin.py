@@ -5,15 +5,16 @@ from aiogram.enums import ParseMode
 from aiogram.filters import StateFilter, or_f
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
+
+from database import DB
+from database import get_bot_statistics, get_user_detailed, ban_bot_user, \
+    make_admin_bot_user
 from tg_bot.filters import IsAdmin, IsNotBanned
 from tg_bot.filters.is_correct_message_user import IsCorrectMessageUser
 from tg_bot.keyboards import admin_menu_keyboard
 from tg_bot.keyboards.inline_keyboards import get_admin_users_panel
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
 from tg_bot.services import BotUserDB
-from database import DB
-from database import get_bot_statistics, get_user_detailed, ban_bot_user, \
-    make_admin_bot_user
 from tg_bot.states.states import FSMAdminMenu
 
 __all__ = ['router']
@@ -73,7 +74,8 @@ async def process_admin_menu_find_user(
         message: Message,
         state: FSMContext,
         bot_user: BotUserDB):
-    logger.info("Админ %s ищет пользователя: %s (%d)", message.from_user.username, bot_user.username, bot_user.telegram_id)
+    logger.info("Админ %s ищет пользователя: %s (%d)", message.from_user.username, bot_user.username,
+                bot_user.telegram_id)
     admin_users_panel = get_admin_users_panel(
         is_banned=bot_user.is_banned,
         is_admin=bot_user.is_admin)
@@ -95,7 +97,8 @@ async def admin_users_panel_detailed(
         state: FSMContext,
         db: DB):
     bot_user = await get_bot_user_from_state(state)
-    logger.info("Админ %s смотрит детали пользователя %s (%d)", callback.from_user.username, bot_user.username, bot_user.telegram_id)
+    logger.info("Админ %s смотрит детали пользователя %s (%d)", callback.from_user.username, bot_user.username,
+                bot_user.telegram_id)
     about_user: dict = await get_user_detailed(db, bot_user.telegram_id)
     about_bot_user = about_user.get('bot_user')
     about_tg_account = about_user.get('tg_account')
@@ -122,7 +125,7 @@ async def admin_users_panel_detailed(
 
 
 @router.callback_query(or_f(F.data == 'admin_users_panel_ban',
-                       F.data == 'admin_users_panel_unban'))
+                            F.data == 'admin_users_panel_unban'))
 async def admin_users_panel_detailed_banning(
         callback: CallbackQuery, state: FSMContext, db: DB):
     bot_user = await get_bot_user_from_state(state)
@@ -142,7 +145,7 @@ async def admin_users_panel_detailed_banning(
 
 
 @router.callback_query(or_f(F.data == 'admin_users_panel_make_admin',
-                       F.data == 'admin_users_panel_unmake_admin'))
+                            F.data == 'admin_users_panel_unmake_admin'))
 async def admin_users_panel_detailed_banning(
         callback: CallbackQuery, state: FSMContext, db: DB):
     bot_user: BotUserDB = await get_bot_user_from_state(state)

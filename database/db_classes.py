@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
-from typing import Optional
+
 __all__ = ["BotUserDB"]
 
 

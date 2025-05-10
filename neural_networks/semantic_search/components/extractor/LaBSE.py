@@ -1,9 +1,9 @@
 import datetime
 
+import faiss
 from faiss import IndexFlatL2
 from numpy import ndarray
 from sentence_transformers import SentenceTransformer
-import faiss
 
 from Entity.SemanticMessage import SemanticMessage
 from neural_networks.semantic_search.components.extractor.EmbeddingMessage import EmbeddingMessage

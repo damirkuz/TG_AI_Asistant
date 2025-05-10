@@ -1,12 +1,16 @@
-from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message
+import logging
 from typing import Callable, Dict, Any, Awaitable
 
+from aiogram import BaseMiddleware
+from aiogram.types import TelegramObject, Message
 
 from tg_bot.lexicon import LEXICON_BUTTONS_RU
 from tg_bot.services import get_user_db
 
 __all__ = ["LoadUserDbMiddleware"]
+
+logger = logging.getLogger(__name__)
+
 
 class LoadUserDbMiddleware(BaseMiddleware):
 
@@ -30,9 +34,14 @@ class LoadUserDbMiddleware(BaseMiddleware):
                 # Проверяем, не загружен ли user_db ранее
                 if "user_db" not in data:
                     db = data.get("db")
+                    logger.debug("Загрузка user_db для пользователя %s (%d) по сообщению: %s", event.from_user.username,
+                                 event.from_user.id, event.text)
                     user_db = await get_user_db(db=db, user_id=event.from_user.id)
                     data["user_db"] = user_db
+                    logger.info("user_db успешно загружен для пользователя %s (%d)", event.from_user.username,
+                                event.from_user.id)
             except Exception as e:
-                print(f"Ошибка БД: {e}")
+                logger.error(f"Ошибка БД при загрузке user_db для пользователя %s (%d): %s", event.from_user.username,
+                             event.from_user.id, e)
 
         return await handler(event, data)

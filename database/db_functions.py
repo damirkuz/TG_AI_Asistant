@@ -1,10 +1,12 @@
+import logging
+
 from aiogram.types import Message
 from asyncpg import Record
 from telethon import TelegramClient
-from config_data import DatabaseConfig
-from database.db_classes import BotUserDB
-from database import DB
 
+from config_data import DatabaseConfig
+from database import DB
+from database.db_classes import BotUserDB
 
 __all__ = [
     "db_create_pool",
@@ -18,12 +20,13 @@ __all__ = [
     "make_admin_bot_user",
     "delete_user_in_db"]
 
-
 import asyncpg
 
+logger = logging.getLogger(__name__)
 
 async def db_create_pool(db_config: DatabaseConfig) -> asyncpg.Pool:
     try:
+        logger.info("Создание пула соединений с БД: %s@%s/%s", db_config.db_user, db_config.db_host, db_config.database)
         return await asyncpg.create_pool(
             user=db_config.db_user,
             password=db_config.db_password,
@@ -34,11 +37,11 @@ async def db_create_pool(db_config: DatabaseConfig) -> asyncpg.Pool:
             ssl=None
         )
     except Exception as e:
+        logger.error(f"Ошибка подключения к базе данных: {e}")
         print(f"Ошибка подключения к базе данных: {e}")
 
-
 async def db_create_need_tables(db: DB) -> None:
-    # Основная таблица пользователей бота
+    logger.info("Создание необходимых таблиц в базе данных")
     await db.execute("""
         CREATE TABLE IF NOT EXISTS bot_users (
             id BIGSERIAL PRIMARY KEY,
@@ -52,7 +55,6 @@ async def db_create_need_tables(db: DB) -> None:
         );
     """)
 
-    # Таблица телеграм-аккаунтов
     await db.execute("""
         CREATE TABLE IF NOT EXISTS tg_accounts (
             id BIGSERIAL PRIMARY KEY,
@@ -63,7 +65,6 @@ async def db_create_need_tables(db: DB) -> None:
         );
     """)
 
-    # Таблица сессий
     await db.execute("""
         CREATE TABLE IF NOT EXISTS account_sessions (
             id BIGSERIAL PRIMARY KEY,
@@ -150,7 +151,7 @@ async def db_create_need_tables(db: DB) -> None:
             created_at TIMESTAMP DEFAULT now()
         );
     """)
-
+    logger.info("Все необходимые таблицы созданы или уже существуют")
 
 async def save_auth(
         client: TelegramClient,
@@ -161,19 +162,9 @@ async def save_auth(
 ) -> None:
     """
     Сохраняет или обновляет данные аутентификации телеграм-аккаунта в базе данных.
-
-    :param client: Объект TelegramClient для получения информации об аккаунте
-    :param db: Объект подключения к базе данных
-    :param session_string: Строка сессии телеграм-аккаунта
-    :param bot_user_id: ID пользователя бота из таблицы bot_users
-    :param password: Пароль для сессии (опционально)
-
-    :raises ValueError: При ошибках сохранения данных или отсутствии аккаунта
-    :raises asyncpg.PostgresError: При ошибках работы с базой данных
     """
     try:
         about_me = await client.get_me()
-
         tg_user_id = int(about_me.id)
         full_name = ' '.join(
             filter(
@@ -181,11 +172,9 @@ async def save_auth(
                     about_me.first_name, about_me.last_name])).strip()
         phone_number = about_me.phone
 
-        # Проверка и нормализация номера телефона
         if phone_number:
             phone_number = ''.join(filter(str.isdigit, phone_number)) or None
 
-        # Вставка данных в таблицу телеграм-аккаунтов
         tg_account_row = await db.fetch_one("""
             INSERT INTO tg_accounts (tg_user_id, full_name, phone_number)
             VALUES ($1, $2, $3)
@@ -196,11 +185,11 @@ async def save_auth(
         """, tg_user_id, full_name, phone_number)
 
         if not tg_account_row:
+            logger.error("Не удалось сохранить телеграм-аккаунт для bot_user_id=%s", bot_user_id)
             raise ValueError("Не удалось сохранить телеграм-аккаунт")
 
         tg_account_id = tg_account_row["id"]
 
-        # Связывание аккаунта с пользователем бота
         await db.execute("""
             INSERT INTO account_sessions (
                 bot_user_id,
@@ -213,14 +202,17 @@ async def save_auth(
                 session_data = EXCLUDED.session_data,
                 password = EXCLUDED.password
         """, bot_user_id, tg_account_id, session_string, password)
+        logger.info("Данные аутентификации сохранены для bot_user_id=%s, tg_account_id=%s", bot_user_id, tg_account_id)
 
     except asyncpg.ForeignKeyViolationError as e:
+        logger.error("Неверный bot_user_id: %s", bot_user_id)
         raise ValueError(f"Неверный bot_user_id: {bot_user_id}") from e
     except asyncpg.PostgresError as e:
+        logger.error("Ошибка базы данных при сохранении аутентификации: %s", str(e))
         raise ValueError(f"Ошибка базы данных: {str(e)}") from e
     except Exception as e:
+        logger.error("Ошибка сохранения данных аутентификации: %s", str(e))
         raise ValueError(f"Ошибка сохранения данных: {str(e)}") from e
-
 
 async def save_bot_user(
         db: DB,
@@ -233,17 +225,6 @@ async def save_bot_user(
 ) -> int:
     """
     Сохраняет или обновляет пользователя бота в таблице bot_users.
-
-    :param db: Объект подключения к базе данных
-    :param telegram_id: Уникальный идентификатор пользователя в Telegram
-    :param full_name: Полное имя пользователя
-    :param username: Юзернейм в Telegram (опционально)
-    :param is_admin: Флаг администратора (по умолчанию False)
-    :param is_active: Флаг активности аккаунта (по умолчанию True)
-
-    :return: ID созданной или обновленной записи
-    :raises ValueError: При ошибках сохранения данных
-    :raises asyncpg.PostgresError: При ошибках работы с базой данных
     """
     try:
         user_row = await db.fetch_one(
@@ -273,23 +254,24 @@ async def save_bot_user(
         )
 
         if not user_row:
+            logger.error("Ошибка при сохранении пользователя telegram_id=%s", telegram_id)
             raise ValueError("Ошибка при сохранении пользователя")
 
+        logger.info("Пользователь telegram_id=%s успешно сохранён/обновлён", telegram_id)
         return user_row["id"]
 
     except asyncpg.PostgresError as e:
+        logger.error("Ошибка базы данных при сохранении пользователя: %s", str(e))
         raise ValueError(f"Ошибка базы данных: {str(e)}") from e
     except Exception as e:
+        logger.error("Неожиданная ошибка при сохранении пользователя: %s", str(e))
         raise ValueError(f"Неожиданная ошибка: {str(e)}") from e
-
 
 async def get_bot_statistics(db: DB) -> Record:
     """
     Получает статистику о пользователях бота
-
-    :param db: Объект подключения к базе данных
-    :return: Статистика пользователей бота
     """
+    logger.debug("Запрос статистики пользователей бота")
     return await db.fetch_one("""SELECT
                                 (SELECT COUNT(*) FROM bot_users) AS registered_users,
                                 (SELECT COUNT(*) FROM tg_accounts) AS connected_accounts,
@@ -297,14 +279,9 @@ async def get_bot_statistics(db: DB) -> Record:
                                 (SELECT COUNT(*) FROM statistics WHERE created_at >= NOW() - INTERVAL '1 day') AS daily_activity;
         """)
 
-
 async def get_user_tg_id_in_db(db: DB, user_message: Message) -> BotUserDB | bool:
     """
     Проверяет есть ли пользователь в базе данных (bot_users), возвращает его BotUserDB
-
-    :param db: Объект подключения к базе данных
-    :param user_message: Сообщение пользователя
-    :return: Record[telegram_id, is_banned] или False
     """
     from tg_bot.services import get_user_db
     telegram_id = 0
@@ -318,20 +295,21 @@ async def get_user_tg_id_in_db(db: DB, user_message: Message) -> BotUserDB | boo
     if user_message.text.startswith('@'):
         username = user_message.text.lstrip('@')
 
-
+    logger.debug("Запрос BotUserDB по telegram_id=%s, username=%s", telegram_id, username)
     bot_user = await get_user_db(db=db, user_id=telegram_id, username=username)
 
-    return bot_user if bot_user else False
+    if bot_user:
+        logger.info("Пользователь найден в базе: telegram_id=%s, username=%s", telegram_id, username)
+    else:
+        logger.warning("Пользователь не найден в базе: telegram_id=%s, username=%s", telegram_id, username)
 
+    return bot_user if bot_user else False
 
 async def get_user_detailed(db: DB, telegram_id: int) -> dict:
     """
     Возвращает подробную информацию о пользователе из базы
-
-    :param db: Объект подключения к базе данных
-    :param telegram_id: Telegram ID запрашиваемого пользователя
-    :return: Словарь, содержащий информацию о пользователе и аккаунте прикреплённому им
     """
+    logger.debug("Запрос подробной информации о пользователе telegram_id=%s", telegram_id)
     result1 = await db.fetch_one("""SELECT *
                                    FROM bot_users
                                    WHERE telegram_id = $1
@@ -363,28 +341,30 @@ async def get_user_detailed(db: DB, telegram_id: int) -> dict:
                 "created_at": result2["created_at"],
             }
         }
+        logger.info("Подробная информация о пользователе telegram_id=%s получена (есть аккаунт)", telegram_id)
     else:
         merged = {"bot_user": dict(result1), "tg_account": None}
+        logger.info("Подробная информация о пользователе telegram_id=%s получена (аккаунта нет)", telegram_id)
 
     return merged
-
 
 async def ban_bot_user(db: DB, telegram_id: int, ban: bool = True) -> None:
     from tg_bot.middlewares.ban_check_middleware import BanCheckMiddleware
     BanCheckMiddleware.clear_user_cache(telegram_id)
+    logger.info("Изменение статуса бана для пользователя telegram_id=%s -> %s", telegram_id, ban)
     await db.execute("""UPDATE bot_users
                         SET is_banned = $1
                         WHERE telegram_id = $2
                     """, ban, telegram_id)
 
-
 async def make_admin_bot_user(db: DB, telegram_id: int, make_admin: bool = True) -> None:
+    logger.info("Изменение статуса администратора для пользователя telegram_id=%s -> %s", telegram_id, make_admin)
     await db.execute("""UPDATE bot_users
                         SET is_admin = $1
                         WHERE telegram_id = $2
                     """, make_admin, telegram_id)
 
-
 async def delete_user_in_db(db: DB, telegram_id: int) -> None:
+    logger.info("Удаление пользователя из базы telegram_id=%s", telegram_id)
     await db.execute("""DELETE FROM bot_users
                         WHERE telegram_id = $1""", telegram_id)

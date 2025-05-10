@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 from redis import Redis
 
-from database import DB
 from config_data import Config
+from database import DB
 
 
 @dataclass

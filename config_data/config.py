@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+
 from environs import Env
 
 __all__ = ["DatabaseConfig", "Config", "load_config", "TGAppConfig"]
+
 
 @dataclass
 class DatabaseConfig:
@@ -14,6 +16,7 @@ class DatabaseConfig:
 @dataclass
 class TgBot:
     token: str
+
 
 @dataclass
 class TGAppConfig:
@@ -29,7 +32,6 @@ class Config:
 
 
 def load_config(path: str | None = None) -> Config:
-
     env = Env()
     env.read_env(path)
 

@@ -4,6 +4,7 @@ from asyncpg import Pool, Record
 
 __all__ = ["DB"]
 
+
 class DB:
 
     def __init__(self, pool: Pool):
