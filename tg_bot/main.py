@@ -9,6 +9,7 @@ from redis.asyncio import Redis
 
 from config_data import Config
 from tg_bot.bot import TelegramBot
+from tg_bot.logging_settings.logging_settings import logging_config
 from tg_bot.middlewares.ban_check_middleware import BanCheckMiddleware
 
 from database import db_create_pool, db_create_need_tables, DB
@@ -22,24 +23,23 @@ from tg_bot.middlewares.load_user_db_middleware import LoadUserDbMiddleware
 from tg_bot.keyboards import set_main_menu
 from tg_bot.services.redis_client_storage import RedisClientStorage
 
+import logging.config
+
+# Устанавливаем настройки логгирования
+logging.config.dictConfig(logging_config)
+
 # Инициализируем логгер
 logger = logging.getLogger(__name__)
 
 
 # Функция конфигурирования и запуска бота
 async def start_tg_bot(config: Config):
-    # Конфигурируем логирование
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='[{asctime}] #{levelname:8} {filename}:'
-               '{lineno} - {name} - {message}',
-        style='{'
-    )
 
     # Выводим в консоль информацию о начале запуска бота
-    logger.info('Starting bot')
+    logger.info('Запускаем бота')
 
     # Инициализируем Redis
+    logger.info('Подключаем redis')
     redis = Redis(host='localhost')
     redis_client_storage = RedisClientStorage(host='redis://localhost')
 
@@ -54,6 +54,7 @@ async def start_tg_bot(config: Config):
     dp = Dispatcher(storage=storage)
 
     # Инициализируем другие объекты (пул соединений с БД, кеш и т.п.)
+    logger.info('Настраиваем базу данных')
     pool = await db_create_pool(db_config=config.db)
     db = DB(pool=pool)
     await db_create_need_tables(db=db)
@@ -65,6 +66,7 @@ async def start_tg_bot(config: Config):
     dp.workflow_data.update({'config': config, 'db': db, 'redis_client_storage': redis_client_storage, 'telegram_bot': telegram_bot})
 
     # Настраиваем главное меню бота
+    logger.info("Настраиваем меню у бота")
     await set_main_menu(bot)
 
     # Регистриуем роутеры
@@ -73,10 +75,10 @@ async def start_tg_bot(config: Config):
 
     # Регистрируем миддлвари
     logger.info('Подключаем миддлвари')
-
     dp.message.outer_middleware(BanCheckMiddleware())
     commands.router.message.outer_middleware(LoadUserDbMiddleware())
 
     # Пропускаем накопившиеся апдейты и запускаем polling
     # await bot.delete_webhook(drop_pending_updates=True)
+    logger.info("Запускаем поллинг")
     await dp.start_polling(bot)

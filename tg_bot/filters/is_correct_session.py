@@ -1,6 +1,7 @@
 import asyncio
 import os
 import random
+import logging
 from datetime import datetime
 from typing import BinaryIO
 
@@ -11,13 +12,16 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from config_data import Config
+
+logger = logging.getLogger(__name__)
+
 __all__ = ["IsCorrectSession"]
 
 
 class IsCorrectSession(BaseFilter):
 
     async def __call__(self, message: Message, bot: Bot, config: Config) -> bool | dict[str, TelegramClient]:
-
+        logger.info("Зашли в фильтр IsCorrectSession")
         document: Document = message.document
 
         if not document:
