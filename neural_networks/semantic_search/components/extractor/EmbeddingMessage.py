@@ -1,5 +1,5 @@
 from typing import Any
-from Entity.SemanticMessage import SemanticMessage
+
 
 
 class EmbeddingMessage:
