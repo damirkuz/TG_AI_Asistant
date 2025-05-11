@@ -25,7 +25,7 @@ class LaBSeSentences:
         sort_messages = [
             [EmbeddingMessage(messages[idx_message], embeddings_messages[idx_message]), distances[0][idx_distances]]
             for idx_message, idx_distances in zip(indices[0], range(len(distances[0])))]
-        return sort_messages[0:min(k, len(sort_messages))]
+        return sort_messages[0:min(k, len(messages))]
 
     def encode_messages(self, messages: list) -> ndarray:
         embedding_messages = self.model.encode([message.get_text() for message in messages])
