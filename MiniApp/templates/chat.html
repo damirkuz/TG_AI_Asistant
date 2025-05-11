@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чат приложение</title>
+    <link rel="stylesheet" href="/static/css/style2.css">
+</head>
+<body>
+    
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Чат приложение</h1>
+        </div>
+        
+        <div class="chat-messages" id="messagesContainer">
+            {% for msg in messages %}
+            <div class="message {% if msg.reply_to %}reply{% endif %}" data-id="{{ msg.id }}">
+                {% if msg.reply_to %}
+                <div class="reply-info">
+                    Ответ на сообщение #{{ msg.reply_to }}
+                </div>
+                {% endif %}
+                <div class="message-header">
+                    <span class="user">{{ msg.user }}</span>
+                    <span class="time">{{ msg.time }}</span>
+                </div>
+                <div class="message-text">{{ msg.text }}</div>
+                <button class="reply-btn" onclick="setReplyTo({{ msg.id }})">Ответить</button>
+            </div>
+            {% endfor %}
+        </div>
+        
+    </div>
+
+    <script src="/static/js/script2.js"></script>
+</body>
+</html>

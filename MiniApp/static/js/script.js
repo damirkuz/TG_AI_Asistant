@@ -1,3 +1,17 @@
+// Получаем initData из Telegram WebApp
+const initData = Telegram.WebApp.initData;
+
+// Отправляем на сервер для проверки
+fetch('/verify', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+        'initData': initData
+    })
+});
+
 function showTab(tabId) {
     // Скрываем все вкладки
     document.querySelectorAll(".tab").forEach(tab => {
@@ -21,3 +35,4 @@ function handleChatChange() {
     const selectedFruit = selectElement.value;
     alert('Вы выбрали: ' + selectedFruit);
   }
+
