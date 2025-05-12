@@ -1,7 +1,11 @@
+import logging
+
 from tg_bot.keyboards import create_reply_kb
 
-__all__ = ['main_menu_keyboard', 'main_menu_admin_keyboard', 'settings_menu_keyboard', 'settings_add_telegram_keyboard', 'admin_menu_keyboard']
+__all__ = ['main_menu_keyboard', 'main_menu_admin_keyboard', 'settings_menu_keyboard', 'settings_add_telegram_keyboard',
+           'admin_menu_keyboard']
 
+logger = logging.getLogger(__name__)
 
 main_menu_keyboard = create_reply_kb(
     'menu_settings',
@@ -31,7 +35,7 @@ settings_add_telegram_keyboard = create_reply_kb(
     'back_to_main_menu'
 )
 
-
+logger.info("Клавиатуры меню успешно созданы")
 admin_menu_keyboard = create_reply_kb(
     'admin_statistics',
     'admin_users',

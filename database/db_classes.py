@@ -1,7 +1,8 @@
 from datetime import datetime
-
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
 __all__ = ["BotUserDB"]
 
 
@@ -14,3 +15,5 @@ class BotUserDB(BaseModel):
     is_active: bool
     is_banned: bool
     created_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
