@@ -10,10 +10,10 @@ import hmac
 app = FastAPI()
 
 # Подключаем статические файлы
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="TG_AI_ASSISTANT/MiniApp/static"), name="static")
 
 # Настройка шаблонов
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="TG_AI_ASSISTANT/MiniApp/templates")
 
 # Пример данных о чатах
 chat_list = ["Общий чат", "Техподдержка", "Разработка", "Маркетинг"]

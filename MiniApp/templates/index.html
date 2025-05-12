@@ -28,7 +28,16 @@
                             <input type="date" class="form-control" id="end_date" name="end_date" required>
                         </div>
                     </div>
-                    
+                    <div class="mb-3">
+                        <label for="user_query" class="form-label">Ваш запрос:</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="user_query" 
+                               name="user_query" 
+                               placeholder="Введите запрос"
+                               aria-describedby="queryHelp">
+                        <div id="queryHelp" class="form-text">Введите ваш вопрос или ключевые слова для анализа</div>
+                    </div>
                     <div class="mb-4">
                         <label class="form-label">Режим анализа:</label>
                         <div class="btn-group w-100" role="group" aria-label="Analysis mode">
