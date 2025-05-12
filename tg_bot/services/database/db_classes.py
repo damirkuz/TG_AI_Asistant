@@ -12,4 +12,5 @@ class BotUserDB(BaseModel):
     full_name: Optional[str]
     is_admin: bool
     is_active: bool
+    is_banned: bool
     created_at: Optional[datetime]
