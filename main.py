@@ -1,5 +1,5 @@
 import asyncio
-import random
+
 from config_data import load_config, Config
 from tg_bot.main import start_tg_bot
 
