@@ -1,6 +1,7 @@
 from typing import Any
 
 
+
 class EmbeddingMessage:
     """Класс для хранения произвольного сообщения и его векторного представления."""
 
