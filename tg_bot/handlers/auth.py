@@ -16,7 +16,7 @@ from tg_bot.keyboards import create_reply_kb, main_menu_keyboard, main_menu_admi
 from tg_bot.services.telethon_auth import auth_send_code, AuthStatesEnum, auth_enter_code, auth_enter_password
 from tg_bot.services.database import save_auth, DB
 
-__all__ = ['router']
+__all__ = ['router', 'auth_request_phone']
 
 
 router = Router()

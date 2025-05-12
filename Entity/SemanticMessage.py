@@ -1,12 +1,13 @@
 import datetime
-import time
+
 
 class SemanticMessage:
     """
     Класс для представления сообщения в Telegram.
     """
 
-    def __init__(self, message_id: int, date: datetime.datetime, date_unixtime: int, from_user: str, from_user_id: int, text: str, reply_to_message_id: int = -1):
+    def __init__(self, message_id: int, date: datetime.datetime, date_unixtime: int, from_user: str, from_user_id: int,
+                 text: str, reply_to_message_id: int = -1):
         """
         :param message_id: Уникальный идентификатор сообщения.
         :param date: Дата и время отправки сообщения.
@@ -65,5 +66,3 @@ class SemanticMessage:
 
     def set_reply_to_message_id(self, reply_to_message_id: int):
         self._reply_to_message_id = reply_to_message_id
-
-
