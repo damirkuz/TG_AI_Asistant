@@ -6,6 +6,7 @@ import torch.cuda
 from Entity.SemanticMessage import SemanticMessage
 from neural_networks.semantic_search.components.extractor.LaBSE import LaBSeSentences
 from neural_networks.semantic_search.components.ranker.CrossEncoderSentences import CrossEncoderSentences
+from neural_networks.semantic_search.components.text_preprocessing.aggregator import aggregator
 
 
 class SearchMode(Enum):
@@ -50,24 +51,34 @@ class SemanticSearch:
                 Returns:
                     list[SemanticMessages]: Топ-k сообщений, отсортированных по схожести.
                 """
-
         # Выбор стратегии поиска на основе текущего режима
         match self.search_mode:
-            case SearchMode.FAST: # Только быстрая модель
+            case SearchMode.FAST:  # Только быстрая модель
                 return self._fast_search(query, messages, k)
-            case SearchMode.HYBRID: # Двухэтапный поиск
+            case SearchMode.HYBRID:  # Двухэтапный поиск
                 return self._hybrid_search(query, messages, k)
-            case SearchMode.SLOW: # Псевдо-режим (фактически гибридный)
+            case SearchMode.SLOW:  # Псевдо-режим (фактически гибридный)
                 return self._slow_search(query, messages, k)
 
     def _fast_search(self, query: str, messages: list[SemanticMessage], k: int) -> list[SemanticMessage]:
         """Быстрый поиск только через векторную модель"""
+
+        # Обьеденение маленьких сообщений в одно большое
+        merge_messages = aggregator.merge_messages_by_time(messages)
+
         # Получение топ-k результатов от векторной модели
-        fast_sort_messages = self.fast_model.get_semantic_matches(query, messages, k)
+        fast_sort_messages = self.fast_model.get_semantic_matches(query, merge_messages, k)
 
         # Преобразование результатов в нужный формат
-        sort_SemanticMessages = [message[0].get_message() for message in fast_sort_messages]
-        return sort_SemanticMessages
+        sort_merge_SemanticMessages = [message[0].get_message() for message in fast_sort_messages]
+
+        # Обратно из одного большого сообщения получаем несколько маленьких
+        sort_SemanticMessages = []
+        for merge_message in sort_merge_SemanticMessages:
+            message = self.fast_model.get_semantic_matches(query, merge_message.get_semantic_messages(), 1)[0]
+            sort_SemanticMessages.append(message)
+
+        return [message[0].get_message() for message in sort_SemanticMessages]
 
     def _hybrid_search(self, query: str, messages: list[SemanticMessage], k: int) -> list[SemanticMessage]:
         """Гибридный поиск с расширенной предварительной выборкой"""
@@ -147,9 +158,9 @@ if __name__ == "__main__":
     ]
 
     for doc in documents:
-        messages.append(SemanticMessage(123, datetime.datetime(2023, 5, 15), 1684108800, "John", 456, doc, 789))
+        messages.append(SemanticMessage(123, datetime.datetime(2023, 5, 15), 1684108800, doc, 456, doc, 789))
 
-    semantic_search = SemanticSearch(SearchMode.FAST)
+    semantic_search = SemanticSearch(SearchMode.HYBRID)
     #print(semantic_search.get_semantic_matches("фреймворк для веб разработки", messages, 10)[0].get_text())
-    for i in semantic_search.get_semantic_matches("Как светить солнце", messages, 10):
+    for i in semantic_search.get_semantic_matches("Погода", messages, 10):
         print(i.get_text())
