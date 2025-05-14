@@ -16,7 +16,7 @@ class LoadUserDbMiddleware(BaseMiddleware):
 
     def __init__(self):
         self.need_messages = {"/start", LEXICON_BUTTONS_RU['menu_admin'], LEXICON_BUTTONS_RU['admin_statistics'],
-                              LEXICON_BUTTONS_RU['admin_users']}
+                              LEXICON_BUTTONS_RU['admin_users'], LEXICON_BUTTONS_RU['menu_find'], LEXICON_BUTTONS_RU['menu_dossier']}
 
     async def __call__(
             self,
@@ -28,7 +28,7 @@ class LoadUserDbMiddleware(BaseMiddleware):
         if not isinstance(event, Message) or not event.from_user:
             return await handler(event, data)
 
-        # Проверяем команду /start
+        # Проверяем команду
         if isinstance(event, Message) and event.text and event.text.strip() in self.need_messages:
             try:
                 # Проверяем, не загружен ли user_db ранее

@@ -5,9 +5,12 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from database import BotUserDB
 from tg_bot.keyboards.reply_keyboards import settings_menu_keyboard
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
 from tg_bot.states import FSMMainMenu, FSMSettingsState
+
+from tg_bot.services.telethon_fetch import update_user_db_chats
 
 __all__ = ['router']
 
@@ -27,15 +30,16 @@ async def process_start_command(message: Message, state: FSMContext):
 
 
 @router.message(F.text == LEXICON_BUTTONS_RU['menu_find'])
-async def process_start_command(message: Message, state: FSMContext):
+async def process_menu_find(message: Message, state: FSMContext, user_db: BotUserDB):
     logger.info("Пользователь %s (%d) выбрал пункт 'Найти'", message.from_user.username, message.from_user.id)
     # TODO здесь должен быть проброс на веб интерфейс
+    # await update_user_db_chats(user_db.id)
     await message.answer(text=LEXICON_ANSWERS_RU['not_done'])
     # await state.set_state(FSMMainState.find_info)
 
 
 @router.message(F.text == LEXICON_BUTTONS_RU['menu_dossier'])
-async def process_start_command(message: Message, state: FSMContext):
+async def process_menu_dossier(message: Message, state: FSMContext):
     logger.info("Пользователь %s (%d) выбрал пункт 'Досье'", message.from_user.username, message.from_user.id)
     # TODO здесь должен быть проброс на веб интерфейс
     await message.answer(text=LEXICON_ANSWERS_RU['not_done'])
