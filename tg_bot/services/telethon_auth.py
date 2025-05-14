@@ -44,7 +44,6 @@ async def auth_send_code(tg_app_config: TGAppConfig,
             return {'tg_client': client}
         except telethon.errors.FloodWaitError as e:
             logger.warning("FloodWaitError при отправке кода на номер %s: ждём %d секунд", phone, e.seconds)
-            print(f"⚠️ Слишком много запросов! Ждём {e.seconds} секунд...")
             await asyncio.sleep(e.seconds)
         except telethon.errors.PhoneNumberBannedError:
             logger.error("Номер %s забанен при попытке отправки кода для user_id=%s", phone, user_id)

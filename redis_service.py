@@ -67,7 +67,6 @@ class RedisClientStorage:
             if client.is_connected() and await client.is_user_authorized():
                 self.local_cache[bot_user_id] = client
                 logger.info("TelegramClient для user_id=%d успешно создан и подключён", bot_user_id)
-                print(await client.get_me())
                 return client
             else:
                 logger.exception("Сессия Telegram для user_id=%d повреждена в базе данных",
@@ -76,7 +75,6 @@ class RedisClientStorage:
 
 
     async def save_session(self, user_id: int, client: TelegramClient):
-        print(await client.get_me())
         async with self.lock:
             session_data = {
                 "session": StringSession.save(client.session),
