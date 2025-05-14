@@ -12,7 +12,7 @@ from database.db_functions import get_user_db
 from tg_bot.filters.correct_data import CorrectPhone, CorrectOTPCode, CorrectPassword
 from tg_bot.keyboards import create_reply_kb, main_menu_keyboard, main_menu_admin_keyboard
 from tg_bot.lexicon import LEXICON_ANSWERS_RU, LEXICON_BUTTONS_RU
-from tg_bot.services.redis_client_storage import RedisClientStorage
+from redis_service import RedisClientStorage
 from tg_bot.services.telethon_auth import auth_send_code, AuthStatesEnum, auth_enter_code, auth_enter_password
 from tg_bot.states import FSMAuthState, FSMMainMenu
 
@@ -78,11 +78,7 @@ async def auth_process_code(message: Message, state: FSMContext, code: str,
     logger.info("Пользователь %s (%d) ввёл код: %s", message.from_user.username, message.from_user.id, code)
     state_data = await state.get_data()
     bot_user_id = state_data.get('bot_user_id')
-    client = await redis_client_storage.get_client(
-        user_id=bot_user_id,
-        api_id=config.tg_app.api_id,
-        api_hash=config.tg_app.api_hash
-    )
+    client = await redis_client_storage.get_client(bot_user_id=bot_user_id)
     phone = state_data.get("phone")
     result = await auth_enter_code(client=client, phone=phone, code=code)
     logger.debug("Результат проверки кода для пользователя %d: %s", message.from_user.id, result)
@@ -126,11 +122,7 @@ async def auth_process_code(
     state_data = await state.get_data()
     await message.delete()
     bot_user_id = state_data.get('bot_user_id')
-    client = await redis_client_storage.get_client(
-        user_id=bot_user_id,
-        api_id=config.tg_app.api_id,
-        api_hash=config.tg_app.api_hash
-    )
+    client = await redis_client_storage.get_client(bot_user_id=bot_user_id)
 
     result = await auth_enter_password(client=client, password=password)
     logger.debug("Результат проверки пароля для пользователя %d: %s", message.from_user.id, result)

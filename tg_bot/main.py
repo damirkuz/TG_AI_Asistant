@@ -4,21 +4,18 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
-from redis.asyncio import Redis
 
 from config_data import Config
 from tg_bot.bot import TelegramBot
 # Импортируем роутеры
 from tg_bot.handlers import commands, other_messages, auth, main_menu, settings_menu, firstly, admin
 from tg_bot.keyboards import set_main_menu
-from tg_bot.logging_settings.async_logging import setup_async_logging, listener  # импортируем асинхронное логгирование
+from async_logging import listener  # импортируем асинхронное логгирование
 from tg_bot.middlewares.ban_check_middleware import BanCheckMiddleware
 # Импортируем миддлвари
 from tg_bot.middlewares.load_user_db_middleware import LoadUserDbMiddleware
-from tg_bot.services.redis_client_storage import RedisClientStorage
 
-# Настраиваем асинхронное логгирование
-setup_async_logging()
+from redis_service import redis_client_storage, redis
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +24,6 @@ logger = logging.getLogger(__name__)
 async def start_tg_bot(config: Config):
     logger.info('Запускаем бота')
 
-    logger.info('Подключаем redis')
-    redis = Redis(host='localhost')
-    redis_client_storage = RedisClientStorage(host='redis://localhost')
 
     storage = RedisStorage(redis=redis)
 
@@ -39,10 +33,6 @@ async def start_tg_bot(config: Config):
     )
     dp = Dispatcher(storage=storage)
 
-    # logger.info('Настраиваем базу данных')
-    # pool = await db_create_pool(db_config=config.db)
-    # db = DB(pool=pool)
-    # await db_create_need_tables(db=db)
 
     telegram_bot = TelegramBot(config=config, redis=redis)
 

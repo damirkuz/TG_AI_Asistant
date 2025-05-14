@@ -1,60 +1,9 @@
 import datetime
-
 from sqlalchemy import (
     BigInteger, Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, UniqueConstraint
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-
 from database.db_core import Base
-
-
-class BotUser(Base):
-    __tablename__ = "bot_users"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
-    username: Mapped[str] = mapped_column(String, nullable=True)
-    full_name: Mapped[str] = mapped_column(String, nullable=True)
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
-
-    # Связь многие-ко-многим через account_sessions
-    accounts = relationship(
-        "TGAccount",
-        secondary="account_sessions",
-        primaryjoin="BotUser.id == AccountSession.bot_user_id",
-        secondaryjoin="TGAccount.id == AccountSession.tg_account_id",
-        back_populates="users"
-    )
-    sessions = relationship("AccountSession", back_populates="bot_user", cascade="all, delete-orphan")
-    chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
-    dossiers = relationship("Dossier", back_populates="user", cascade="all, delete-orphan")
-    settings = relationship("Setting", back_populates="user", cascade="all, delete-orphan")
-    statistics = relationship("Statistic", back_populates="user", cascade="all, delete-orphan")
-    queries = relationship("Query", back_populates="user", cascade="all, delete-orphan")
-
-
-class TGAccount(Base):
-    __tablename__ = "tg_accounts"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    tg_user_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
-    full_name: Mapped[str] = mapped_column(String, nullable=True)
-    phone_number: Mapped[str] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
-
-    # Связь многие-ко-многим через account_sessions
-    users = relationship(
-        "BotUser",
-        secondary="account_sessions",
-        primaryjoin="TGAccount.id == AccountSession.tg_account_id",
-        secondaryjoin="BotUser.id == AccountSession.bot_user_id",
-        back_populates="accounts"
-    )
-    sessions = relationship("AccountSession", back_populates="tg_account", cascade="all, delete-orphan")
-
 
 class AccountSession(Base):
     __tablename__ = "account_sessions"
@@ -64,12 +13,10 @@ class AccountSession(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     bot_user_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("bot_users.id", ondelete="CASCADE", name="fk_account_sessions_bot_user_id_bot_users")
+        BigInteger, ForeignKey("bot_users.id", ondelete="CASCADE"), nullable=False
     )
     tg_account_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("tg_accounts.id", ondelete="CASCADE", name="fk_account_sessions_tg_account_id_tg_accounts")
+        BigInteger, ForeignKey("tg_accounts.id"), nullable=False  # Без ondelete="CASCADE"!
     )
     session_data: Mapped[str] = mapped_column(Text, nullable=False)
     password: Mapped[str] = mapped_column(Text, nullable=True)
@@ -79,20 +26,75 @@ class AccountSession(Base):
     tg_account = relationship("TGAccount", back_populates="sessions")
 
 
+class BotUser(Base):
+    __tablename__ = "bot_users"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
+    username: Mapped[str] = mapped_column(String, nullable=True)
+    full_name: Mapped[str] = mapped_column(String, nullable=True)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
+
+    sessions = relationship(
+        "AccountSession",
+        back_populates="bot_user",
+        cascade="all, delete-orphan"
+    )
+    accounts = relationship(
+        "TGAccount",
+        secondary="account_sessions",
+        primaryjoin="BotUser.id == AccountSession.bot_user_id",
+        secondaryjoin="TGAccount.id == AccountSession.tg_account_id",
+        back_populates="users"
+    )
+    chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
+    dossiers = relationship("Dossier", back_populates="user", cascade="all, delete-orphan")
+    settings = relationship("Setting", back_populates="user", cascade="all, delete-orphan")
+    statistics = relationship("Statistic", back_populates="user", cascade="all, delete-orphan")
+    queries = relationship("Query", back_populates="user", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
+
+
+class TGAccount(Base):
+    __tablename__ = "tg_accounts"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tg_user_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
+    full_name: Mapped[str] = mapped_column(String, nullable=True)
+    phone_number: Mapped[str] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
+
+    sessions = relationship(
+        "AccountSession",
+        back_populates="tg_account",
+        cascade="all, delete-orphan"
+    )
+    users = relationship(
+        "BotUser",
+        secondary="account_sessions",
+        primaryjoin="TGAccount.id == AccountSession.tg_account_id",
+        secondaryjoin="BotUser.id == AccountSession.bot_user_id",
+        back_populates="accounts"
+    )
+
+
 class Chat(Base):
     __tablename__ = "chats"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("bot_users.id", ondelete="CASCADE", name="fk_chats_user_id_bot_users")
+        BigInteger, ForeignKey("bot_users.id", ondelete="CASCADE"), nullable=False
     )
-    chat_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=True)
     type: Mapped[str] = mapped_column(String, nullable=True)
     last_updated: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("BotUser", back_populates="chats")
+    dossiers = relationship("Dossier", back_populates="chat", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="chat", cascade="all, delete-orphan")
 
 
@@ -101,20 +103,18 @@ class Message(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     chat_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("chats.chat_id", ondelete="CASCADE", name="fk_messages_chat_id_chats")
+        BigInteger, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
     )
     user_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("bot_users.id", ondelete="SET NULL", name="fk_messages_user_id_bot_users"),
-        nullable=True
+        BigInteger, ForeignKey("bot_users.id", ondelete="CASCADE"), nullable=False
     )
     telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
     text: Mapped[str] = mapped_column(Text, nullable=True)
     date: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
 
     chat = relationship("Chat", back_populates="messages")
-    user = relationship("BotUser")
+    user = relationship("BotUser", back_populates="messages")
 
 
 class Dossier(Base):
@@ -122,15 +122,18 @@ class Dossier(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("bot_users.id", ondelete="CASCADE", name="fk_dossiers_user_id_bot_users")
+        BigInteger, ForeignKey("bot_users.id", ondelete="CASCADE"), nullable=False
     )
     target_user_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
-    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    chat_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
+    )
     summary_md: Mapped[str] = mapped_column(Text, nullable=True)
+    details: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("BotUser", back_populates="dossiers")
+    chat = relationship("Chat", back_populates="dossiers")
 
 
 class Setting(Base):
@@ -138,11 +141,11 @@ class Setting(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("bot_users.id", ondelete="CASCADE", name="fk_settings_user_id_bot_users")
+        BigInteger, ForeignKey("bot_users.id", ondelete="CASCADE"), nullable=False
     )
     openai_key: Mapped[str] = mapped_column(Text, nullable=True)
     llm_model: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("BotUser", back_populates="settings")
 
@@ -152,9 +155,7 @@ class Statistic(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("bot_users.id", ondelete="SET NULL", name="fk_statistics_user_id_bot_users"),
-        nullable=True
+        BigInteger, ForeignKey("bot_users.id", ondelete="CASCADE"), nullable=False
     )
     action: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
@@ -169,7 +170,7 @@ class APIKey(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     service: Mapped[str] = mapped_column(Text, nullable=True)
     key: Mapped[str] = mapped_column(Text, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -178,8 +179,7 @@ class Query(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("bot_users.id", ondelete="CASCADE", name="fk_queries_user_id_bot_users")
+        BigInteger, ForeignKey("bot_users.id", ondelete="CASCADE"), nullable=False
     )
     query_text: Mapped[str] = mapped_column(Text, nullable=False)
     context_source: Mapped[str] = mapped_column(Text, nullable=True)
