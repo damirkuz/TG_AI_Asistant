@@ -8,6 +8,7 @@ from telethon import TelegramClient
 from database import BotUserDB
 from database.db_core import async_session_maker  # Фабрика сессий
 from database.models import BotUser, TGAccount, AccountSession, Statistic
+from telethon.sessions import StringSession
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,6 @@ logger = logging.getLogger(__name__)
 async def save_auth(
         client: TelegramClient,
         bot_user_id: int,
-        session_string: str,
         password: str = None
 ) -> None:
     """
@@ -50,17 +50,18 @@ async def save_auth(
             result = await session.execute(stmt)
             tg_account_id = result.scalar_one()
 
+
             # AccountSession upsert
             stmt2 = insert(AccountSession).values(
                 bot_user_id=bot_user_id,
                 tg_account_id=tg_account_id,
-                session_data=session_string,
+                session_data=StringSession.save(client.session),
                 password=password).on_conflict_do_update(
                 index_elements=[
                     AccountSession.bot_user_id,
                     AccountSession.tg_account_id],
                 set_={
-                    "session_data": session_string,
+                    "session_data": StringSession.save(client.session),
                     "password": password})
             await session.execute(stmt2)
             await session.commit()
