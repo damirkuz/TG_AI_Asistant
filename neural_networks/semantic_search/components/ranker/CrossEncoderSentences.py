@@ -1,6 +1,6 @@
 from sentence_transformers import CrossEncoder
 
-from Entity.SemanticMessage import SemanticMessage
+from entity.SemanticMessage import SemanticMessage
 
 
 class CrossEncoderSentences:

@@ -1,7 +1,7 @@
 import datetime
 
-from Entity.SemanticMessage import SemanticMessage
-from neural_networks. semantic_search. components. text_preprocessing. aggregator. MergeSemanticMessages import MergeSemanticMessages
+from entity.SemanticMessage import SemanticMessage
+from neural_networks.text_preprocessing.aggregator.MergeSemanticMessages import MergeSemanticMessages
 
 
 def merge_messages_by_time(messages: list[SemanticMessage], time: int = 120) -> list[MergeSemanticMessages]:
