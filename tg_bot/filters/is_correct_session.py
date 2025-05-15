@@ -81,10 +81,9 @@ class IsCorrectSession(BaseFilter):
             except FileNotFoundError:
                 logger.warning("Временный session-файл %s не найден для удаления", file_path)
 
-        if try_сlient.is_connected():
-            session_string = StringSession.save(try_сlient.session)
+        if try_сlient.is_connected() and await try_сlient.is_user_authorized():
             logger.info("Session-файл %s успешно проверен и подключён", file_path)
-            return {'client': try_сlient, 'session_string': session_string}
+            return {'client': try_сlient}
         else:
             logger.warning("Session-файл %s не прошёл проверку: клиент не подключён", file_path)
             return False

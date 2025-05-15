@@ -48,7 +48,8 @@ async def start_tg_bot(config: Config):
 
     logger.info('Подключаем миддлвари')
     dp.message.outer_middleware(BanCheckMiddleware())
-    commands.router.message.outer_middleware(LoadUserDbMiddleware())
+    dp.message.outer_middleware(LoadUserDbMiddleware())
+    # commands.router.message.outer_middleware(LoadUserDbMiddleware())
 
     logger.info("Запускаем поллинг")
     try:
