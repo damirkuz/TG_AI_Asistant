@@ -19,8 +19,10 @@ async def save_auth(
         password: str = None
 ) -> None:
     """
-    Сохраняет или обновляет данные аутентификации телеграм-аккаунта в базе данных.
+    Сохраняет или обновляет данные аутентификации телеграм-аккаунта в базе данных и Redis.
     """
+
+    # Заносим в базу данных
     try:
         about_me = await client.get_me()
         tg_user_id = int(about_me.id)
@@ -75,6 +77,10 @@ async def save_auth(
     except Exception as e:
         logger.error("Ошибка сохранения данных аутентификации: %s", str(e))
         raise ValueError(f"Ошибка сохранения данных: {str(e)}") from e
+
+    # Заносим в Redis
+    from redis_service import redis_client_storage
+    await redis_client_storage.save_session(user_id=bot_user_id, client=client)
 
 
 async def save_bot_user(
