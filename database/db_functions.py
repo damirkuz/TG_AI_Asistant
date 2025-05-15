@@ -328,3 +328,12 @@ async def add_users_chats(bot_user_id: int, chats: List[dict]) -> None:
 
         await session.execute(upsert_stmt)
         await session.commit()
+
+
+async def check_have_connected_account(bot_user_id: int) -> bool:
+    async with async_session_maker() as session:
+        stmt = select(AccountSession).where(AccountSession.bot_user_id == bot_user_id)
+        result = (await session.execute(stmt)).scalar_one_or_none()
+        if result:
+            return True
+
