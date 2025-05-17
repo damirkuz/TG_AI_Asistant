@@ -51,14 +51,13 @@ async def auth_request_code(message: Message, state: FSMContext, phone: str, con
         return
     else:
         # сохраняем сессию в локальное хранилище
-        session_string = sent_result.get("session_string")
         tg_client = sent_result.get("tg_client")
         state_data = await state.get_data()
         bot_user_id = state_data.get('bot_user_id')
         logger.debug("Сохраняем сессию пользователя %d в Redis", bot_user_id)
         await redis_client_storage.save_session(bot_user_id, tg_client)
 
-        await state.update_data(session_string=session_string, phone=phone)
+        await state.update_data(phone=phone)
         await message.answer(text=LEXICON_ANSWERS_RU['auth_request_code'], reply_markup=ReplyKeyboardRemove())
         await state.set_state(FSMAuthState.waiting_for_code)
         logger.info("Пользователь %d: отправлен запрос на ввод кода, FSMAuthState -> waiting_for_code",
@@ -142,9 +141,8 @@ async def end_auth(
         client: TelegramClient,
         password: str = None):
     logger.info("Авторизация завершена для пользователя %s (%d)", message.from_user.username, message.from_user.id)
-    session_string = client.session.save()
     state_data = await state.get_data()
-    await save_auth(client=client, session_string=session_string, password=password,
+    await save_auth(client=client, password=password,
                     bot_user_id=state_data.get('bot_user_id'))
     logger.debug("Сессия пользователя %d сохранена в базе", message.from_user.id)
     user_db = await get_user_db(user_id=message.from_user.id)

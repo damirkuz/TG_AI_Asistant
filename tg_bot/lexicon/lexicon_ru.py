@@ -68,7 +68,8 @@ LEXICON_ANSWERS_RU = {
     'admin_user_maked_admin': "Пользователь назначен администратором",
     'admin_user_unmaked_admin': "Пользователь разжалован",
     'settings_delete_my_data': ("Данные о вас удалены\n"
-                                "Чтобы начать заново нажмите /start")
+                                "Чтобы начать заново нажмите /start"),
+    'not_connected_account': 'Сначала привяжите телеграм аккаунт'
 }
 
 LEXICON_BUTTONS_RU = {

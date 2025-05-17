@@ -22,8 +22,16 @@ class AccountSession(Base):
     password: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
 
-    bot_user = relationship("BotUser", back_populates="sessions")
-    tg_account = relationship("TGAccount", back_populates="sessions")
+    bot_user = relationship(
+        "BotUser",
+        back_populates="sessions",
+        overlaps="accounts"  # Добавляем overlaps
+    )
+    tg_account = relationship(
+        "TGAccount",
+        back_populates="sessions",
+        overlaps="users"  # Добавляем overlaps
+    )
 
 
 class BotUser(Base):
@@ -41,6 +49,7 @@ class BotUser(Base):
     sessions = relationship(
         "AccountSession",
         back_populates="bot_user",
+        overlaps="accounts",  # Добавляем overlaps
         cascade="all, delete-orphan"
     )
     accounts = relationship(
@@ -48,7 +57,9 @@ class BotUser(Base):
         secondary="account_sessions",
         primaryjoin="BotUser.id == AccountSession.bot_user_id",
         secondaryjoin="TGAccount.id == AccountSession.tg_account_id",
-        back_populates="users"
+        back_populates="users",
+        viewonly=True,
+        overlaps="sessions"
     )
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
     dossiers = relationship("Dossier", back_populates="user", cascade="all, delete-orphan")
@@ -70,6 +81,7 @@ class TGAccount(Base):
     sessions = relationship(
         "AccountSession",
         back_populates="tg_account",
+        overlaps="users",  # Добавляем overlaps
         cascade="all, delete-orphan"
     )
     users = relationship(
@@ -77,7 +89,9 @@ class TGAccount(Base):
         secondary="account_sessions",
         primaryjoin="TGAccount.id == AccountSession.tg_account_id",
         secondaryjoin="BotUser.id == AccountSession.bot_user_id",
-        back_populates="accounts"
+        back_populates="accounts",
+        viewonly=True,  # Делаем отношение read-only
+        overlaps="sessions"  # Указываем конфликтующие отношения
     )
 
 

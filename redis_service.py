@@ -58,18 +58,26 @@ class RedisClientStorage:
             client = TelegramClient(
                 StringSession(tg_session_data),
                 self.tg_api_id,
-                self.tg_api_hash
+                self.tg_api_hash,
+                auto_reconnect=True,
+                connection_retries=5
             )
 
             await client.connect()
-            self.local_cache[bot_user_id] = client
-            logger.info("TelegramClient для user_id=%d успешно создан и подключён", bot_user_id)
-            return client
+            if client.is_connected() and await client.is_user_authorized():
+                self.local_cache[bot_user_id] = client
+                logger.info("TelegramClient для user_id=%d успешно создан и подключён", bot_user_id)
+                return client
+            else:
+                logger.exception("Сессия Telegram для user_id=%d повреждена в базе данных",
+                               bot_user_id)
+                raise ValueError("Сессия Telegram для user_id=%d повреждена в базе данных", bot_user_id)
+
 
     async def save_session(self, user_id: int, client: TelegramClient):
         async with self.lock:
             session_data = {
-                "session": client.session.save(),
+                "session": StringSession.save(client.session),
                 "timestamp": datetime.now().isoformat()
             }
             # Сохраняем в Redis на 1 час

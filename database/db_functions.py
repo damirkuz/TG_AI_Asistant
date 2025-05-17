@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 from sqlalchemy import select, update, func, or_, text
 from sqlalchemy.dialects.postgresql import insert
@@ -8,6 +9,8 @@ from telethon import TelegramClient
 from database import BotUserDB
 from database.db_core import async_session_maker  # Фабрика сессий
 from database.models import BotUser, TGAccount, AccountSession, Statistic
+import database.models
+from telethon.sessions import StringSession
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +18,6 @@ logger = logging.getLogger(__name__)
 async def save_auth(
         client: TelegramClient,
         bot_user_id: int,
-        session_string: str,
         password: str = None
 ) -> None:
     """
@@ -50,17 +52,18 @@ async def save_auth(
             result = await session.execute(stmt)
             tg_account_id = result.scalar_one()
 
+
             # AccountSession upsert
             stmt2 = insert(AccountSession).values(
                 bot_user_id=bot_user_id,
                 tg_account_id=tg_account_id,
-                session_data=session_string,
+                session_data=StringSession.save(client.session),
                 password=password).on_conflict_do_update(
                 index_elements=[
                     AccountSession.bot_user_id,
                     AccountSession.tg_account_id],
                 set_={
-                    "session_data": session_string,
+                    "session_data": StringSession.save(client.session),
                     "password": password})
             await session.execute(stmt2)
             await session.commit()
@@ -304,3 +307,33 @@ async def get_user_db(
                 user_id,
                 username)
         return BotUserDB.model_validate(user, from_attributes=True) if user else None
+
+
+async def add_users_chats(bot_user_id: int, chats: List[dict]) -> None:
+    for chat in chats:
+        chat['user_id'] = bot_user_id
+        chat['last_updated'] = func.now()
+
+    async with async_session_maker() as session:
+        stmt = insert(database.models.Chat).values(chats)
+
+        # Указываем действие при конфликте по chat_id
+        upsert_stmt = stmt.on_conflict_do_update(
+            index_elements=['chat_id'],  # Уникальный индекс/первичный ключ
+            set_={
+                'title': stmt.excluded.title,
+                'type': stmt.excluded.type,
+                'last_updated': func.now()
+            })
+
+        await session.execute(upsert_stmt)
+        await session.commit()
+
+
+async def check_have_connected_account(bot_user_id: int) -> bool:
+    async with async_session_maker() as session:
+        stmt = select(AccountSession).where(AccountSession.bot_user_id == bot_user_id)
+        result = (await session.execute(stmt)).scalar_one_or_none()
+        if result:
+            return True
+

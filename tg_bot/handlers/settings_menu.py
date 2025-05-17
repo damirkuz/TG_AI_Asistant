@@ -42,11 +42,11 @@ async def add_telegram_session(message: Message, state: FSMContext):
 
 
 @router.message(StateFilter(FSMSettingsState.waiting_session_file), IsCorrectSession())
-async def waiting_session_file(message: Message, state: FSMContext, client: TelegramClient, session_string: str):
+async def waiting_session_file(message: Message, state: FSMContext, client: TelegramClient):
     logger.info("Пользователь %s (%d) загрузил корректный session-файл", message.from_user.username,
                 message.from_user.id)
     state_data = await state.get_data()
-    await save_auth(client=client, session_string=session_string, bot_user_id=state_data.get('bot_user_id'))
+    await save_auth(client=client, bot_user_id=state_data.get('bot_user_id'))
     logger.debug("Сессия пользователя %d сохранена в базе", message.from_user.id)
     await message.answer(text=LEXICON_ANSWERS_RU['settings_add_telegram_session_good'])
     user_db = await get_user_db(user_id=message.from_user.id)
