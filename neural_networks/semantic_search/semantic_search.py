@@ -162,5 +162,5 @@ if __name__ == "__main__":
 
     semantic_search = SemanticSearch(SearchMode.HYBRID)
     #print(semantic_search.get_semantic_matches("фреймворк для веб разработки", messages, 10)[0].get_text())
-    for i in semantic_search.get_semantic_matches("Погода", messages, 10):
+    for i in semantic_search.get_semantic_matches("ыт а", messages, 10):
         print(i)
