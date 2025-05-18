@@ -10,6 +10,7 @@ import logging
 from environs import Env
 from telethon import TelegramClient
 from database.db_core import async_session_maker
+from database.models import *
 from sqlalchemy import select
 from typing import Optional
 
@@ -109,7 +110,7 @@ async def verify(
         if not user_id:
             logger.warning("No user ID found in initData")
             raise HTTPException(status_code=400, detail="No user ID provided")
-        if not isUserFromDB(id):
+        if not await isUserFromDB(user_id):
             logger.warning("No user in db")
             raise HTTPException(status_code=400, detail="No user ID provided")
         # else:
@@ -119,12 +120,16 @@ async def verify(
         logger.error(f"Verification error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
     
-async def isUserFromDB(id: int) -> bool:
+async def isUserFromDB(telegram_id: int) -> bool:
     async with async_session_maker() as session:
-        exists = session.query(
-        session.query(bot_user).filter_by(telegram_id=id).exists()
-        ).scalar()
-        yield session
+        stmt = (
+        select(BotUser.id)
+        .where(BotUser.telegram_id == telegram_id)
+        .limit(1)
+        )
+        user_id = await session.scalar(stmt)
+        return user_id is not None
+
 
 def extract_user_id(init_data: str) -> Optional[str]:
     """Извлекает user_id из initData"""
@@ -139,28 +144,29 @@ def extract_user_id(init_data: str) -> Optional[str]:
         return None
 
 def validate_init_data(init_data: str, bot_token: str) -> bool:
-    """Валидация Telegram WebApp initData"""
-    try:
-        pairs = init_data.split('&')
-        data = {}
-        for pair in pairs:
-            if '=' in pair:
-                key, value = pair.split('=', 1)
-                data[key] = value
+    # """Валидация Telegram WebApp initData"""
+    # try:
+    #     pairs = init_data.split('&')
+    #     data = {}
+    #     for pair in pairs:
+    #         if '=' in pair:
+    #             key, value = pair.split('=', 1)
+    #             data[key] = value
         
-        if 'hash' not in data:
-            return False
+    #     if 'hash' not in data:
+    #         return False
             
-        hash_str = data.pop('hash')
-        data_str = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
+    #     hash_str = data.pop('hash')
+    #     data_str = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
         
-        secret_key = hashlib.sha256(bot_token.encode()).digest()
-        computed_hash = hmac.new(secret_key, data_str.encode(), hashlib.sha256).hexdigest()
+    #     secret_key = hashlib.sha256(bot_token.encode()).digest()
+    #     computed_hash = hmac.new(secret_key, data_str.encode(), hashlib.sha256).hexdigest()
         
-        return computed_hash == hash_str
-    except Exception as e:
-        logger.error(f"Validation error: {str(e)}")
-        return False
+    #     return computed_hash == hash_str
+    # except Exception as e:
+    #     logger.error(f"Validation error: {str(e)}")
+    #     return False
+    pass
 
 @app.get("/dialogs/{user_id}")
 async def get_dialogs(user_id: int):
