@@ -4,15 +4,18 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-import hashlib
-import hmac
+from telethon import TelegramClient  
+from redis_service import redis_client_storage  
 import logging
 from environs import Env
 from telethon import TelegramClient
 from database.db_core import async_session_maker
+from database.db_functions import get_user_db
 from database.models import *
 from sqlalchemy import select
 from typing import Optional
+# import hashlib
+# import hmac
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -22,15 +25,6 @@ logging.basicConfig(level=logging.INFO)
 env = Env()
 env.read_env()
 BOT_TOKEN = env("BOT_TOKEN")
-
-# Инициализация клиента Redis (заглушка)
-class RedisClientStorage:
-    async def get_client(self, bot_user_id: int) -> TelegramClient:
-        """Получение Telethon клиента из Redis"""
-        # Здесь должна быть реальная реализация
-        return TelegramClient(...)
-
-redis_client_storage = RedisClientStorage()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,15 +53,38 @@ async def get_db():
     async with async_session_maker() as session:
         yield session
 
+# @app.get("/{telegram_user_id}", response_class=HTMLResponse)
+# async def main_page(request : Request, telegram_user_id : int):
+#     return templates.TemplateResponse(
+#         "main_page.html",
+#         {
+#             "request": request,
+#             "chat_list": chat_list,
+#             "title" : "TG Assistant"
+#         }
+#     )
+
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def read_root(request: Request, telegram_user_id: Optional[int] = None):
     """Главная страница"""
+    if telegram_user_id != None:
+        user = await get_user_db(telegram_user_id)
+        bot_id = user.id
+        chats = await get_dialogs(bot_id)
+        print(chats)
+        return templates.TemplateResponse(
+            "main_page.html",
+            {
+                "request": request,
+                "chat_list": chats,
+                "title" : "TG Assistant"
+            }
+        )
+
     return templates.TemplateResponse(
-        "index.html",
+        "auth.html",
         {
             "request": request,
-            "chat_list": chat_list,
-            "title": "Анализатор чатов"
         }
     )
 
@@ -77,11 +94,9 @@ async def analyze_chat(request: Request):
     form_data = await request.form()
     # Здесь будет обработка формы
     return templates.TemplateResponse(
-        "index.html",
+        "auth.html",
         {
             "request": request,
-            "chat_list": chat_list,
-            "title": "Анализатор чатов"
         }
     )
 
@@ -168,19 +183,20 @@ def validate_init_data(init_data: str, bot_token: str) -> bool:
     #     return False
     pass
 
-@app.get("/dialogs/{user_id}")
 async def get_dialogs(user_id: int):
     """Получение списка диалогов через Telethon"""
     try:
-        tg_client = await redis_client_storage.get_client(bot_user_id=user_id)
-        dialogs = []
-        async for dialog in tg_client.iter_dialogs():
-            dialogs.append({
-                "name": dialog.name,
-                "id": dialog.id,
-                "unread": dialog.unread_count
-            })
-        return {"dialogs": dialogs}
+        
+        tg_client: TelegramClient = await redis_client_storage.get_client(bot_user_id=user_id) 
+        if not tg_client:
+            raise HTTPException(status_code=404, detail="Telegram client not found")
+        
+        if not tg_client.is_connected():
+            await tg_client.connect()
+        chats = []
+        async for chat in tg_client.iter_dialogs():  
+            chats.append(chat.name) 
+        return chats
     except Exception as e:
         logger.error(f"Error getting dialogs: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving dialogs")
