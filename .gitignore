@@ -190,3 +190,4 @@ cython_debug/
 
 users_tg_sessions/
 sessions/
+alembic/versions/
