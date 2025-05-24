@@ -35,10 +35,11 @@ settings_add_telegram_keyboard = create_reply_kb(
     'back_to_main_menu'
 )
 
-logger.info("Клавиатуры меню успешно созданы")
 admin_menu_keyboard = create_reply_kb(
     'admin_statistics',
     'admin_users',
     'back_to_main_menu',
     width=2
 )
+
+logger.info("Клавиатуры меню успешно созданы")
