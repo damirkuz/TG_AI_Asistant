@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import FastAPI, Request, HTTPException, Depends, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
@@ -12,8 +12,12 @@ from telethon import TelegramClient
 from database.db_core import async_session_maker
 from database.db_functions import get_user_db
 from database.models import *
+from datetime import datetime as dt
 from sqlalchemy import select
 from typing import Optional
+from Entity.SemanticMessage import *
+from neural_networks.semantic_search.semantic_search import *
+from tg_bot.services.telethon_fetch import iter_dialog_messages
 # import hashlib
 # import hmac
 
@@ -53,45 +57,79 @@ async def get_db():
     async with async_session_maker() as session:
         yield session
 
-# @app.get("/{telegram_user_id}", response_class=HTMLResponse)
-# async def main_page(request : Request, telegram_user_id : int):
-#     return templates.TemplateResponse(
-#         "main_page.html",
-#         {
-#             "request": request,
-#             "chat_list": chat_list,
-#             "title" : "TG Assistant"
-#         }
-#     )
-
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, telegram_user_id: Optional[int] = None):
     """Главная страница"""
-    if telegram_user_id != None:
-        user = await get_user_db(telegram_user_id)
-        bot_id = user.id
-        chats = await get_dialogs(bot_id)
-        print(chats)
+    try:
+        if telegram_user_id != None:
+            user = await get_user_db(telegram_user_id)
+            bot_id = user.id
+            new_chat_list = await get_dialogs(bot_id)
+            chats = []
+            for chat in new_chat_list:
+                chats.append(chat.name)
+            return templates.TemplateResponse(
+                "main_page.html",
+                {
+                    "request": request,
+                    "chat_list": chats,
+                    "title" : "TG Assistant"
+                }
+            )
+
         return templates.TemplateResponse(
-            "main_page.html",
+            "auth.html",
             {
                 "request": request,
-                "chat_list": chats,
-                "title" : "TG Assistant"
             }
         )
-
-    return templates.TemplateResponse(
-        "auth.html",
-        {
-            "request": request,
-        }
-    )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="No user ID provided")
 
 @app.post("/")
-async def analyze_chat(request: Request):
+async def analyze_chat(request: Request,
+        chat_name: str = Form(...),
+        start_date: str = Form(...),
+        end_date: str = Form(...),
+        user_query: str = Form(...),
+        analysis_mode: str = Form(...),
+        telegram_user_id: int = Form(...),):
     """Обработка формы анализа чата"""
-    form_data = await request.form()
+    if telegram_user_id == None:
+        raise HTTPException(status_code=400, detail="No user ID provided")
+    user = await get_user_db(telegram_user_id)
+    bot_id = user.id
+    tg_client : TelegramClient = await redis_client_storage.get_client(bot_user_id=bot_id)
+    chats = await get_dialogs(bot_id)
+    chat_id = None
+    for chat in chats:
+        if chat.name == chat_name:
+            chat_id = chat.id
+            break
+    startdt = dt.strptime(start_date, "%Y-%m-%d")
+    enddt = dt.strptime(end_date, "%Y-%m-%d")
+    msgs = iter_dialog_messages(client=tg_client, dialog=chat_id, start_date=startdt, end_date=enddt)
+    messages = []
+    async for message in msgs:
+        print(message)
+        messages.append(SemanticMessage(message_id=message.id,
+                                        date=message.date,
+                                        date_unixtime=message.date.timestamp(),
+                                        from_user=str(message.from_id.user_id),
+                                        from_user_id=message.from_id.user_id,
+                                        text=message.message,
+                                        reply_to_message_id=message.reply_to))
+    semantic_search = ""
+    match analysis_mode:
+        case "fast":
+            semantic_search = SemanticSearch(SearchMode.FAST)
+        case "slow":
+            semantic_search = SemanticSearch(SearchMode.SLOW)
+        case "medium":
+            semantic_search = SemanticSearch(SearchMode.HYBRID)
+    correct_messages = semantic_search.get_semantic_matches(query=user_query, messages=messages, k=7)
+    # print(chat_name, start_date, end_date, user_query, analysis_mode, telegram_user_id)
+    # form_data = await request.form()
     # Здесь будет обработка формы
     return templates.TemplateResponse(
         "auth.html",
@@ -195,7 +233,7 @@ async def get_dialogs(user_id: int):
             await tg_client.connect()
         chats = []
         async for chat in tg_client.iter_dialogs():  
-            chats.append(chat.name) 
+            chats.append(chat) 
         return chats
     except Exception as e:
         logger.error(f"Error getting dialogs: {str(e)}")

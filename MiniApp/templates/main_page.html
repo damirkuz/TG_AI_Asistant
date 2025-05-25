@@ -10,6 +10,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="/" id="mainForm">
+                        <input type="hidden" name="telegram_user_id" value="{{ request.query_params.telegram_user_id }}">
                         <div class="mb-3">
                             <label for="chat_name" class="form-label">Выберите чат:</label>
                             <select class="form-select" id="chat_name" name="chat_name" required>
@@ -36,6 +37,7 @@
                                 id="user_query" 
                                 name="user_query" 
                                 placeholder="Введите запрос"
+                                required
                                 aria-describedby="queryHelp">
                             <div id="queryHelp" class="form-text">Введите ваш вопрос или ключевые слова для анализа</div>
                         </div>
@@ -46,7 +48,7 @@
                                 <label class="btn btn-outline-primary" for="fast">Быстрый</label>
                                 
                                 <input type="radio" class="btn-check" name="analysis_mode" id="medium" value="medium" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="medium">Средний</label>
+                                <label class="btn btn-outline-primary" for="medium">Гибридный</label>
                                 
                                 <input type="radio" class="btn-check" name="analysis_mode" id="slow" value="slow" autocomplete="off">
                                 <label class="btn btn-outline-primary" for="slow">Медленный</label>
@@ -57,6 +59,15 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<div id="errorBlock" style="display: none;">
+    <div class="d-flex justify-content-center align-items-center" style="height: 100vh; width: 100%;">
+        <div class="text-center">
+            <div class="alert alert-danger" role="alert" id="errorMessage"></div>
+            <button onclick="location.reload()" class="btn btn-primary mt-3">Попробовать снова</button>
         </div>
     </div>
 </div>
