@@ -110,13 +110,20 @@ async def analyze_chat(request: Request,
     enddt = dt.strptime(end_date, "%Y-%m-%d")
     msgs = iter_dialog_messages(client=tg_client, dialog=chat_id, start_date=startdt, end_date=enddt)
     messages = []
+    all_chat_id_username = {}
     async for message in msgs:
-        print(message)
+        from_user_id = message.from_id
+        if from_user_id == None:
+            from_user_id = message.peer_id.user_id
+        else:
+            from_user_id = from_user_id.user_id
+        name = await tg_client.get_entity(from_user_id)
+        all_chat_id_username[message.from_id.user_id] = name.username
         messages.append(SemanticMessage(message_id=message.id,
                                         date=message.date,
                                         date_unixtime=message.date.timestamp(),
-                                        from_user=str(message.from_id.user_id),
-                                        from_user_id=message.from_id.user_id,
+                                        from_user=name.username,
+                                        from_user_id=from_user_id,
                                         text=message.message,
                                         reply_to_message_id=message.reply_to))
     semantic_search = ""
@@ -128,9 +135,12 @@ async def analyze_chat(request: Request,
         case "medium":
             semantic_search = SemanticSearch(SearchMode.HYBRID)
     correct_messages = semantic_search.get_semantic_matches(query=user_query, messages=messages, k=7)
-    # print(chat_name, start_date, end_date, user_query, analysis_mode, telegram_user_id)
-    # form_data = await request.form()
-    # Здесь будет обработка формы
+    
+    # for i in correct_messages:
+    #     print(i.get_from(), i.get_text())
+    # # print(chat_name, start_date, end_date, user_query, analysis_mode, telegram_user_id)
+    # # form_data = await request.form()
+    # # Здесь будет обработка формы
     return templates.TemplateResponse(
         "auth.html",
         {

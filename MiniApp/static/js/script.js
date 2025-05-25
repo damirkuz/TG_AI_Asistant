@@ -8,10 +8,37 @@ document.addEventListener('DOMContentLoaded', function() {
         showError("Запустите приложение через меню команд бота");
         return;
     }
-    const form = document.getElementById('mainForm');
+
+    // Получаем элементы дат
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
     
+    // Добавляем валидацию дат
+    function validateDates() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (startDate && endDate && startDate > endDate) {
+            endDateInput.setCustomValidity('Дата окончания не может быть раньше даты начала');
+            endDateInput.reportValidity();
+            return false;
+        } else {
+            endDateInput.setCustomValidity('');
+            return true;
+        }
+    }
+    
+    // Слушатели событий для валидации
+    startDateInput.addEventListener('change', validateDates);
+    endDateInput.addEventListener('change', validateDates);
+
+    const form = document.getElementById('mainForm');
     form.addEventListener('submit', function(e) {
         e.preventDefault();
+
+        if (!validateDates()) {
+            return;
+        }
         
         // Проверяем заполнено ли поле запроса
         const userQuery = document.getElementById('user_query').value.trim();
