@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    let tg = window.Telegram.WebApp
+    let tg = window.Telegram.WebApp;
     if (!window.Telegram?.WebApp) {
         showError("Это приложение работает только внутри Telegram");
         return;
@@ -33,47 +33,55 @@ document.addEventListener('DOMContentLoaded', function() {
     endDateInput.addEventListener('change', validateDates);
 
     const form = document.getElementById('mainForm');
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
-
-        if (!validateDates()) {
-            return;
-        }
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
         
-        // Проверяем заполнено ли поле запроса
-        const userQuery = document.getElementById('user_query').value.trim();
-        if (!userQuery) {
-            alert('Пожалуйста, введите ваш запрос');
-            document.getElementById('user_query').focus();
-            return;
-        }
+        // Сразу меняем состояние кнопки
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Отправка...';
         
-        // Остальной код отправки формы...
-        const url = new URL(window.location.href);
-        const telegramUserId = url.searchParams.get('telegram_user_id');
-        
-        const formData = new FormData(form);
-        if (telegramUserId) {
-            formData.append('telegram_user_id', telegramUserId);
-        }
-        
-        fetch(url.pathname, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;
-            } else {
-                return response.json();
+        try {
+            if (!validateDates()) {
+                return;
             }
-        })
-        .then(data => {
-            console.log(data);
-        })
-        .catch(error => {
+
+            const userQuery = document.getElementById('user_query').value.trim();
+            if (!userQuery) {
+                alert('Пожалуйста, введите ваш запрос');
+                document.getElementById('user_query').focus();
+                return;
+            }
+            
+            const url = new URL(window.location.href);
+            const telegramUserId = url.searchParams.get('telegram_user_id');
+            
+            const formData = new FormData(form);
+            if (telegramUserId) {
+                formData.append('telegram_user_id', telegramUserId);
+            }
+            
+            const response = await fetch(url.pathname, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Ошибка сервера');
+            }
+            
+            // Получаем HTML и заменяем содержимое страницы
+            const html = await response.text();
+            document.documentElement.innerHTML = html;
+            
+        } catch (error) {
             console.error('Error:', error);
-        });
+            alert('Произошла ошибка при отправке формы');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
     });
 });
 

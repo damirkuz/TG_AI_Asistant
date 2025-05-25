@@ -86,7 +86,7 @@ async def read_root(request: Request, telegram_user_id: Optional[int] = None):
     except Exception as e:
         raise HTTPException(status_code=400, detail="No user ID provided")
 
-@app.post("/")
+@app.post("/", response_class=HTMLResponse)
 async def analyze_chat(request: Request,
         chat_name: str = Form(...),
         start_date: str = Form(...),
@@ -118,11 +118,11 @@ async def analyze_chat(request: Request,
         else:
             from_user_id = from_user_id.user_id
         name = await tg_client.get_entity(from_user_id)
-        all_chat_id_username[message.from_id.user_id] = name.username
+        all_chat_id_username[from_user_id] = name.first_name
         messages.append(SemanticMessage(message_id=message.id,
                                         date=message.date,
                                         date_unixtime=message.date.timestamp(),
-                                        from_user=name.username,
+                                        from_user=name.first_name,
                                         from_user_id=from_user_id,
                                         text=message.message,
                                         reply_to_message_id=message.reply_to))
@@ -135,16 +135,22 @@ async def analyze_chat(request: Request,
         case "medium":
             semantic_search = SemanticSearch(SearchMode.HYBRID)
     correct_messages = semantic_search.get_semantic_matches(query=user_query, messages=messages, k=7)
+    messages_for_form = []
+    for i in correct_messages:
+        messages_for_form.append({
+            "user": i.get_from(),
+            "text": i.get_text(),
+            "time": str(i.get_date()),  # Формат: "YYYY-MM-DD HH:MM:SS"
+        })
     
-    # for i in correct_messages:
-    #     print(i.get_from(), i.get_text())
+
     # # print(chat_name, start_date, end_date, user_query, analysis_mode, telegram_user_id)
     # # form_data = await request.form()
-    # # Здесь будет обработка формы
     return templates.TemplateResponse(
-        "auth.html",
-        {
-            "request": request,
+        "result.html",{
+        "request": request,
+        "chat_title": chat_name,
+        "messages": sorted(messages_for_form, key=lambda x: x["time"])
         }
     )
 
