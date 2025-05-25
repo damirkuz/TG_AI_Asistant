@@ -3,10 +3,10 @@ from enum import Enum, auto
 
 import torch.cuda
 
-from Entity.SemanticMessage import SemanticMessage
+from entity.SemanticMessage import SemanticMessage
 from neural_networks.semantic_search.components.extractor.LaBSE import LaBSeSentences
 from neural_networks.semantic_search.components.ranker.CrossEncoderSentences import CrossEncoderSentences
-from neural_networks.semantic_search.components.text_preprocessing.aggregator import aggregator
+from neural_networks.text_preprocessing.aggregator import aggregator
 
 
 class SearchMode(Enum):
@@ -162,5 +162,5 @@ if __name__ == "__main__":
 
     semantic_search = SemanticSearch(SearchMode.HYBRID)
     #print(semantic_search.get_semantic_matches("фреймворк для веб разработки", messages, 10)[0].get_text())
-    for i in semantic_search.get_semantic_matches("Погода", messages, 10):
-        print(i.get_text())
+    for i in semantic_search.get_semantic_matches("ыт а", messages, 10):
+        print(i)
