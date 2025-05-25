@@ -5,7 +5,7 @@ import faiss
 from faiss import IndexFlatL2
 from numpy import ndarray
 
-from Entity.SemanticMessage import SemanticMessage
+from entity.SemanticMessage import SemanticMessage
 from neural_networks.semantic_search.components.extractor.EmbeddingMessage import EmbeddingMessage
 
 from neural_networks.semantic_search.utils.loger import logger

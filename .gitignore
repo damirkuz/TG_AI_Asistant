@@ -190,4 +190,11 @@ cython_debug/
 
 users_tg_sessions/
 sessions/
+
+
+# Сырые данные для создания датасета спам фильтра для семантической нейросети
+/neural_networks/text_preprocessing/spam_filter/parsers_for_spam_dataset/*
+
+
 alembic/versions/
+

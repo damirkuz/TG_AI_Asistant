@@ -66,3 +66,9 @@ class SemanticMessage:
 
     def set_reply_to_message_id(self, reply_to_message_id: int):
         self._reply_to_message_id = reply_to_message_id
+
+    def __str__(self):
+        return "(name={}, date={}, text={})".format(self.get_from(), self.get_date(), self.get_text())
+
+    def __repr__(self):
+        return self.__str__()
