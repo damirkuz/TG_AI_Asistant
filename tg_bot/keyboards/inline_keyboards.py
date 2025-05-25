@@ -1,10 +1,13 @@
 import logging
 
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, WebAppInfo
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from tg_bot.keyboards import create_inline_kb
 
-__all__ = ['get_admin_users_panel']
+__all__ = ['get_admin_users_panel', 'start_mini_app_keyboard']
+
+from tg_bot.lexicon import LEXICON_BUTTONS_RU, LEXICON_URLS_RU
 
 logger = logging.getLogger(__name__)
 
@@ -29,3 +32,13 @@ def get_admin_users_panel(is_banned: bool = False, is_admin: bool = False) -> In
 
     logger.debug("Итоговый список кнопок: %s", buttons_name)
     return create_inline_kb(*buttons_name)
+
+
+def get_start_mini_app_keyboard() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text=LEXICON_BUTTONS_RU['start_mini_app'], web_app=WebAppInfo(url=LEXICON_URLS_RU['mini_app']))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+start_mini_app_keyboard = get_start_mini_app_keyboard()
