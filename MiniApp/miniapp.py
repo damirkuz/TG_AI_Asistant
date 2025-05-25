@@ -134,7 +134,7 @@ async def analyze_chat(request: Request,
             semantic_search = SemanticSearch(SearchMode.SLOW)
         case "medium":
             semantic_search = SemanticSearch(SearchMode.HYBRID)
-    correct_messages = semantic_search.get_semantic_matches(query=user_query, messages=messages, k=7)
+    correct_messages = semantic_search.get_semantic_matches(query=user_query, messages=messages, k=30)
     messages_for_form = []
     for i in correct_messages:
         messages_for_form.append({
@@ -149,7 +149,7 @@ async def analyze_chat(request: Request,
     return templates.TemplateResponse(
         "result.html",{
         "request": request,
-        "chat_title": chat_name,
+        "chat_title": chat_name + " запрос = " + user_query,
         "messages": sorted(messages_for_form, key=lambda x: x["time"])
         }
     )
@@ -213,28 +213,6 @@ def extract_user_id(init_data: str) -> Optional[str]:
         return None
 
 def validate_init_data(init_data: str, bot_token: str) -> bool:
-    # """Валидация Telegram WebApp initData"""
-    # try:
-    #     pairs = init_data.split('&')
-    #     data = {}
-    #     for pair in pairs:
-    #         if '=' in pair:
-    #             key, value = pair.split('=', 1)
-    #             data[key] = value
-        
-    #     if 'hash' not in data:
-    #         return False
-            
-    #     hash_str = data.pop('hash')
-    #     data_str = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
-        
-    #     secret_key = hashlib.sha256(bot_token.encode()).digest()
-    #     computed_hash = hmac.new(secret_key, data_str.encode(), hashlib.sha256).hexdigest()
-        
-    #     return computed_hash == hash_str
-    # except Exception as e:
-    #     logger.error(f"Validation error: {str(e)}")
-    #     return False
     pass
 
 async def get_dialogs(user_id: int):
