@@ -7,7 +7,7 @@ from openai.types.responses import Response
 from telethon import TelegramClient
 
 from entity.SemanticMessage import SemanticMessage
-from neural_networks.AiAPI import get_openai_client
+from neural_networks.AiAPI.connect_to_openAI import get_openai_client
 from neural_networks.dossier.prompts import prompt_for_chunk_analyze
 from redis_service import redis_client_storage
 from tg_bot.services import iter_dialog_messages
