@@ -15,7 +15,7 @@ from database.models import *
 from datetime import datetime as dt
 from sqlalchemy import select
 from typing import Optional
-from Entity.SemanticMessage import *
+from entity.SemanticMessage import *
 from neural_networks.semantic_search.semantic_search import *
 from tg_bot.services.telethon_fetch import iter_dialog_messages
 # import hashlib
@@ -150,7 +150,7 @@ async def analyze_chat(request: Request,
         "result.html",{
         "request": request,
         "chat_title": chat_name + " запрос = " + user_query,
-        "messages": sorted(messages_for_form, key=lambda x: x["time"])
+        "messages": messages_for_form,
         }
     )
 
