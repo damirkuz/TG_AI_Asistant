@@ -137,11 +137,12 @@ async def analyze_chat(request: Request,
     correct_messages = semantic_search.get_semantic_matches(query=user_query, messages=messages, k=30)
     messages_for_form = []
     for i in correct_messages:
-        messages_for_form.append({
-            "user": i.get_from(),
-            "text": i.get_text(),
-            "time": str(i.get_date()),  # Формат: "YYYY-MM-DD HH:MM:SS"
-        })
+        if i.get_text() != None:
+            messages_for_form.append({
+                "user": i.get_from(),
+                "text": i.get_text(),
+                "time": str(i.get_date()),  # Формат: "YYYY-MM-DD HH:MM:SS"
+            })
     
 
     # # print(chat_name, start_date, end_date, user_query, analysis_mode, telegram_user_id)
