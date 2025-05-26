@@ -1,0 +1,15 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+}
+
+.load_block, #errorBlock {
+    background-color: white;
+}
+
+.alert {
+    max-width: 500px;
+    margin: 0 auto;
+}
