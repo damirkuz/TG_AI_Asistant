@@ -12,6 +12,7 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from config_data import Config
+from redis_service import RedisClientStorage
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +58,10 @@ class IsCorrectSession(BaseFilter):
         file_setted_path = f"sessions/{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}_{random.randint(1000, 9999)}_{document.file_name}"
         logger.debug("Фильтр IsCorrectSession: временный путь для файла - %s", file_setted_path)
 
-        return await IsCorrectSession.check_session_file(file_setted_path, file_data, config)
+        return await IsCorrectSession.check_session_file(file_setted_path, file_data, config, message.from_user.id)
 
     @staticmethod
-    async def check_session_file(file_path: str, file_data: BinaryIO, config: Config) -> bool | dict[
+    async def check_session_file(file_path: str, file_data: BinaryIO, config: Config, user_id: int) -> bool | dict[
         str, TelegramClient]:
         logger = logging.getLogger(__name__)
         logger.debug("Проверка session-файла по пути %s", file_path)
@@ -70,6 +71,7 @@ class IsCorrectSession(BaseFilter):
         try:
             try_сlient = TelegramClient(file_path, config.tg_app.api_id, config.tg_app.api_hash)
             await try_сlient.connect()
+
         except Exception as e:  # почему-то некорректная сессия проходит как DatabaseError
             logger.error("Ошибка при подключении через session-файл %s: %s", file_path, str(e))
             return False
@@ -83,6 +85,7 @@ class IsCorrectSession(BaseFilter):
 
         if try_сlient.is_connected() and await try_сlient.is_user_authorized():
             logger.info("Session-файл %s успешно проверен и подключён", file_path)
+            await RedisClientStorage.save_session(user_id=user_id)
             return {'client': try_сlient}
         else:
             logger.warning("Session-файл %s не прошёл проверку: клиент не подключён", file_path)

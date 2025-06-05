@@ -159,41 +159,6 @@ async def get_bot_statistics() -> dict:
         }
 
 
-# async def get_user_tg_id_in_db(user_message: Message) -> BotUserDB | None:
-#     """
-#     Проверяет есть ли пользователь в базе данных (bot_users), возвращает его BotUserDB
-#     """
-#     telegram_id = None
-#     username = None
-#     if user_message.contact:
-#         telegram_id = user_message.contact.id
-#     elif user_message.text.isdigit():
-#         telegram_id = int(user_message.text)
-#     elif user_message.text.startswith('@'):
-#         username = user_message.text.lstrip('@')
-#
-#     async with async_session_maker() as session:
-#         if telegram_id:
-#             stmt = select(BotUser).where(BotUser.telegram_id == telegram_id)
-#         elif username:
-#             stmt = select(BotUser).where(BotUser.username == username)
-#         else:
-#             return None
-#         result = await session.execute(stmt)
-#         bot_user = result.scalar_one_or_none()
-#         if bot_user:
-#             logger.info(
-#                 "Пользователь найден в базе: telegram_id=%s, username=%s",
-#                 telegram_id,
-#                 username)
-#         else:
-#             logger.warning(
-#                 "Пользователь не найден в базе: telegram_id=%s, username=%s",
-#                 telegram_id,
-#                 username)
-#         return BotUserDB.model_validate(bot_user) if bot_user else None
-
-
 async def get_user_detailed(telegram_id: int) -> dict | None:
     """
     Возвращает подробную информацию о пользователе из базы
