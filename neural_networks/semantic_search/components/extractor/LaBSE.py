@@ -14,7 +14,7 @@ from neural_networks.semantic_search.utils.loger import logger
 class LaBSeSentences:
     def __init__(self, device="cpu"):
         self.device = device
-        self.model = SentenceTransformer("Moriec/Vinogradov_semantic_search")
+        self.model = SentenceTransformer("Moriec/Vinogradov_semantic_search", device=device)
         # self.model.save("local_model/")
 
     def get_semantic_matches(self, query: str, messages: list, k: int) -> list[[EmbeddingMessage, int]]:
